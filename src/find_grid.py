@@ -7,7 +7,7 @@ from matplotlib import pyplot as plt
 from statistics import median
 
 # read image
-img = cv2.imread('/Users/khufkens/Desktop/output/format_1_6118_004_1_4.jpg',0)
+img = cv2.imread('format_1_6118_004_1_4.jpg',0)
 
 # threshold original image
 ret, bw = cv2.threshold(img, 0, 255, cv2.THRESH_BINARY+cv2.THRESH_OTSU)
