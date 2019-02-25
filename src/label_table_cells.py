@@ -97,7 +97,7 @@ def load_labels(label_file):
     label.append(l.rstrip())
   return label
 
-def label_data(input_dir,
+def label_image(input_dir,
                model_file,
                label_file,
                output_dir,
@@ -107,8 +107,8 @@ def label_data(input_dir,
   file_names = glob.glob(input_dir + "/*.jpg")
 
   # load default settings
-  input_height = 224 #299
-  input_width = 224 #299
+  input_height = 128 #224 #299
+  input_width = 128 #224 #299
   input_mean = 0
   input_std = 255
   input_layer = "Placeholder"
@@ -146,8 +146,75 @@ def label_data(input_dir,
        })
      results = np.squeeze(results)
      top = results.argsort()[-5:][::-1]
-     cnn_values.append(results[top_k[0]])
-     cnn_labels.append(labels[top_k[0]])
+     cnn_values.append(results[top[0]])
+     cnn_labels.append(labels[top[0]])
+
+  # concat data into pandas data frame
+  df = pd.DataFrame({'cnn_labels':cnn_labels,
+                   'cnn_values':cnn_values,
+                   'files':file_names})
+
+  # construct path
+  out_file = os.path.join(output_dir, prefix + "_cnn_labels.csv")
+
+  # write data to disk
+  df.to_csv(out_file, sep=',', index = False)
+  
+  # return dataframe
+  return df
+
+
+def label_data(input_dir,
+               model_file,
+               label_file,
+               output_dir,
+               prefix):
+
+  # list files
+  file_names = glob.glob(input_dir + "/*.jpg")
+
+  # load default settings
+  input_height = 128 #224 #299
+  input_width = 128 #224 #299
+  input_mean = 0
+  input_std = 255
+  input_layer = "Placeholder"
+  output_layer = "final_result"
+
+  # these things are static
+  graph = load_graph(model_file)
+  input_name = "import/" + input_layer
+  output_name = "import/" + output_layer
+  input_operation = graph.get_operation_by_name(input_name)
+  output_operation = graph.get_operation_by_name(output_name)
+
+  # load labels
+  labels = load_labels(label_file)
+
+  # initiate empty vectores
+  cnn_values = []
+  cnn_labels = []
+
+  # return output
+  with tf.Session(graph=graph) as sess:
+   for file_name in file_names:
+
+     # dynamic component
+     t = read_tensor_from_image_file(
+         file_name,
+         sess,
+         input_height,
+         input_width,
+         input_mean,
+         input_std)
+
+     results = sess.run(output_operation.outputs[0], {
+           input_operation.outputs[0]: t
+       })
+     results = np.squeeze(results)
+     top = results.argsort()[-5:][::-1]
+     cnn_values.append(results[top[0]])
+     cnn_labels.append(labels[top[0]])
 
   # concat data into pandas data frame
   df = pd.DataFrame({'cnn_labels':cnn_labels,
