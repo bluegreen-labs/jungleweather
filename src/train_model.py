@@ -1315,7 +1315,7 @@ if __name__ == '__main__':
       '--tfhub_module',
       type=str,
       default=(
-          'https://tfhub.dev/google/imagenet/inception_v3/feature_vector/1'),
+          'https://tfhub.dev/google/imagenet/mobilenet_v2_100_224/feature_vector/2'),
       help="""\
       Which TensorFlow Hub module to use.
       See https://github.com/tensorflow/hub/blob/r0.1/docs/modules/image.md

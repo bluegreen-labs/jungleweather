@@ -7,8 +7,8 @@ import numpy as np
 import pandas as pd
 from matplotlib import pyplot as plt
 from inner_crop import *
-from label_image_list import *
-from cnn_check import *
+from label_table_cells import *
+from match_preview import *
 
 # for ORB feature extraction, will move
 # to SIFT in later release (more robust)
@@ -30,12 +30,12 @@ def getArgs():
    parser.add_argument('-t',
                        '--template',
                        help = 'template to match to data',
-                       default = '../data/templates/format_1.jpg')
+                       default = '../data-raw/templates/format_1.jpg')
                        
    parser.add_argument('-d',
                        '--directory',
                        help = 'location of the data to match',
-                       default = '../data/format_1/')
+                       default = '../data-raw/format_1/')
 
    parser.add_argument('-o',
                        '--output_directory',
@@ -50,10 +50,6 @@ def getArgs():
                        '--scale_ratio',
                        help = 'shrink data by factor x, for faster processing',
                        default = 0.5)
-
-   parser.add_argument('--input_dir', 
-                       help='directory with images to process',
-                       default = '../data/cnn_data/out_of_sample/')
                        
    parser.add_argument('--graph',
                        help='graph/model to be executed',
@@ -225,7 +221,7 @@ if __name__ == '__main__':
   scale_ratio = float(args.scale_ratio)
 
   # set default guides filename
-  guides_file = "../data/templates/guides.txt"
+  guides_file = "../data-raw/templates/guides.txt"
 
   # extract filename and extension of the mask
   mask_name, file_extension = os.path.splitext(args.template)

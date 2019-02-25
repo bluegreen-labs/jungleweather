@@ -39,7 +39,7 @@ def getArgs():
   parser.add_argument(
         "--input_dir",
         help="directory with images to process",
-        default = "../data/cnn_data/out_of_sample/")
+        default = "../data-raw/cnn_data/out_of_sample/")
   parser.add_argument(
         "--graph",
         help="graph/model to be executed",
@@ -65,10 +65,10 @@ def load_graph(model_file):
 
 def read_tensor_from_image_file(file_name,
                                 sess,
-                                input_height=299,
-                                input_width=299,
-                                input_mean=0,
-                                input_std=255):
+                                input_height,
+                                input_width,
+                                input_mean,
+                                input_std):
   input_name = "file_reader"
   output_name = "normalized"
   file_reader = tf.read_file(file_name, input_name)
@@ -87,7 +87,6 @@ def read_tensor_from_image_file(file_name,
   dims_expander = tf.expand_dims(float_caster, 0)
   resized = tf.image.resize_bilinear(dims_expander, [input_height, input_width])
   normalized = tf.divide(tf.subtract(resized, [input_mean]), [input_std])
-  #sess = tf.Session()
   result = sess.run(normalized)
   return result
 
@@ -108,8 +107,8 @@ def label_data(input_dir,
   file_names = glob.glob(input_dir + "/*.jpg")
 
   # load default settings
-  input_height = 299
-  input_width = 299
+  input_height = 224 #299
+  input_width = 224 #299
   input_mean = 0
   input_std = 255
   input_layer = "Placeholder"
@@ -137,16 +136,16 @@ def label_data(input_dir,
      t = read_tensor_from_image_file(
          file_name,
          sess,
-         input_height=input_height,
-         input_width=input_width,
-         input_mean=input_mean,
-         input_std=input_std)
+         input_height,
+         input_width,
+         input_mean,
+         input_std)
 
      results = sess.run(output_operation.outputs[0], {
            input_operation.outputs[0]: t
        })
      results = np.squeeze(results)
-     top_k = results.argsort()[-5:][::-1]
+     top = results.argsort()[-5:][::-1]
      cnn_values.append(results[top_k[0]])
      cnn_labels.append(labels[top_k[0]])
 
