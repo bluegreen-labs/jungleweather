@@ -5,7 +5,7 @@ import os, argparse, glob, tempfile, shutil
 import cv2
 import numpy as np
 import pandas as pd
-from matplotlib import pyplot as plt
+import tensorflow as tf
 from inner_crop import *
 from label_table_cells import *
 from match_preview import *
@@ -142,7 +142,12 @@ def alignImages(im, template, im_original):
   # return matched image and ancillary data
   return im_registered, h
 
-def cookieCutter(locations, im, path, tmp_path, prefix):
+def cookieCutter(locations,
+                 im,
+                 path,
+                 prefix,
+                 model_file,
+                 label_file):
   
   # cuts cookies out of the aligned data
   # for citsci processing
@@ -153,7 +158,6 @@ def cookieCutter(locations, im, path, tmp_path, prefix):
   x = x.astype(int)
   x = np.sort(x)
   y = np.asarray(locations[0][2], dtype=float)
-  #y = im.shape[0] - y
   y = y.astype(int)
   y = np.sort(y)
   
@@ -162,55 +166,112 @@ def cookieCutter(locations, im, path, tmp_path, prefix):
   header = im[0:y[0],:]
   cv2.imwrite(path + "/" + prefix + "_header.jpg", header)
 
-  # loop over all x values
-  for i, x_value in enumerate(x):
-   for j, y_value in enumerate(y):
-    try:
+  # setup CNN
+  # load default settings
+  input_height = 128 #224 #299
+  input_width = 128 #224 #299
+  input_mean = 0
+  input_std = 255
+  input_layer = "Placeholder"
+  output_layer = "final_result"
+
+  # these things are static
+  graph = load_graph(model_file)
+  input_name = "import/" + input_layer
+  output_name = "import/" + output_layer
+  input_operation = graph.get_operation_by_name(input_name)
+  output_operation = graph.get_operation_by_name(output_name)
+
+  # load labels
+  labels = load_labels(label_file)
+
+  # initiate empty vectores
+  cnn_values = []
+  cnn_labels = []
+  file_names = []
+
+  # return output
+  with tf.Session(graph=graph) as sess:
     
-     # padding
-     col_width = int(round((x[i+1] - x[i])/3))
-     row_width = int(round((y[i+1] - y[i])/2))
+    # loop over all x values
+    for i, x_value in enumerate(x):
+     for j, y_value in enumerate(y):
+      try:
+      
+       # padding
+       col_width = int(round((x[i+1] - x[i])/3))
+       row_width = int(round((y[i+1] - y[i])/2))
+    
+       x_min = int(x[i] - col_width)
+       x_max = int(x[i+1] + col_width)
+       y_min = int(y[j] - row_width)
+       y_max = int(y[j+1] + row_width)
   
-     x_min = int(x[i] - col_width)
-     x_max = int(x[i+1] + col_width)
-     y_min = int(y[j] - row_width)
-     y_max = int(y[j+1] + row_width)
+       if x_max > int(im.shape[1]):
+        x_max = int(im.shape[1])
+  
+       # copy
+       #im_rect = im.copy()
+       
+       # draw rectangle
+       #cv2.line(im_rect, (x_min+col_width-15, y_max-row_width+10),
+       #(x_min+col_width-5, y_max-row_width+10), 255, 3)
+       #cv2.line(im_rect, (x_min+col_width-15, y_max-row_width+10),
+       #(x_min+col_width-15, y_max-row_width), 255, 3)
+  
+       # shaded section
+       #im_rect[y_max-row_width+10:,:] = im_rect[y_max-row_width+10:,:] * 0.7
+  
+       # crop images using preset coordinates both
+       # with and without a rectangle
+       #crop_im_rect = im_rect[y_min:y_max,x_min:x_max]
+       crop_im = im[y_min:y_max,x_min:x_max]
+       
+      except:
+       # Continue to next iteration on fail
+       # happens when index runs out
+       continue
+       
+      tf_im = np.full((crop_im.shape[0],crop_im.shape[1],3),255,dtype=np.uint8)
+      for l in range(2):
+       tf_im[:,:,l] = crop_im
+        
+      tf_im = cv2.resize(tf_im, dsize=(128, 128), interpolation = cv2.INTER_CUBIC)
+      tf_im = cv2.normalize(tf_im.astype('float'),
+         None, -0.5, .5, cv2.NORM_MINMAX)
+      tf_im = np.asarray(tf_im)
+      tf_im = np.expand_dims(tf_im,axis=0)
+       
+      results = sess.run(output_operation.outputs[0], {
+             input_operation.outputs[0]: tf_im
+         })
+      results = np.squeeze(results)
+      top = results.argsort()[-5:][::-1]
+      cnn_values.append(results[top[0]])
+      cnn_labels.append(labels[top[0]])
+  
+      # if the crop routine didn't fail write to disk
+      #filename = path + "/" + prefix + "_" + str(i+1) + "_" + str(j+1) + ".jpg"
+      #cv2.imwrite(filename, crop_im_rect, [cv2.IMWRITE_JPEG_QUALITY, 50])
+      
+      # write the clean images to a temporary directory for
+      # screening using a DL routine
+      image_name = prefix + "_" + str(i+1) + "_" + str(j+1) + ".jpg"
+      file_names.append(image_name)
+      cv2.imwrite(path + "/" + image_name, crop_im)
 
-     if x_max > int(im.shape[1]):
-      x_max = int(im.shape[1])
+  # concat data into pandas data frame
+  df = pd.DataFrame({'cnn_labels':cnn_labels,
+                   'cnn_values':cnn_values,
+                   'files':file_names})
 
-     # copy
-     im_rect = im.copy()
-     
-     # draw rectangle
-     cv2.line(im_rect, (x_min+col_width-15, y_max-row_width+10),
-     (x_min+col_width-5, y_max-row_width+10), 255, 3)
-     cv2.line(im_rect, (x_min+col_width-15, y_max-row_width+10),
-     (x_min+col_width-15, y_max-row_width), 255, 3)
-
-     # shaded section
-     #im_rect[y_max-row_width+10:,:] = im_rect[y_max-row_width+10:,:] * 0.7
-
-     # crop images using preset coordinates both
-     # with and without a rectangle
-     crop_im_rect = im_rect[y_min:y_max,x_min:x_max]
-     crop_im = im[y_min:y_max,x_min:x_max]
-     
-    except:
-     # Continue to next iteration on fail
-     # happens when index runs out
-     continue
-
-    # if the crop routine didn't fail write to disk
-    filename = path + "/" + prefix + "_" + str(i+1) + "_" + str(j+1) + ".jpg"
-    cv2.imwrite(filename, crop_im_rect, [cv2.IMWRITE_JPEG_QUALITY, 50])
-    
-    # write the clean images to a temporary directory for
-    # screening using a DL routine
-    filename = tmp_path + "/" + prefix + "_" + str(i+1) + "_" + str(j+1) + ".jpg"
-    cv2.imwrite(filename, crop_im)
-
-  return
+  # construct path
+  out_file = os.path.join(path, prefix + "_cnn_labels.csv")
+  
+  # write data to disk
+  df.to_csv(out_file, sep=',', index = False)
+  
+  return df
 
 if __name__ == '__main__':
   
@@ -321,27 +382,13 @@ if __name__ == '__main__':
   
     # cutting things up into cookies
     print("-- extracting header and table cell subsets")
-    temp_dir = tempfile.mkdtemp()
     
-    cookieCutter(guides,
+    labels = cookieCutter(guides,
                  im_aligned,
                  output_directory,
-                 temp_dir,
-                 prefix)
-    
-    # screen the cookie cutter data (cells) using the
-    # machine learning algorithm, write data to output
-    # directory
-    # label the data
-    print("-- CNN labels")
-    labels = label_data(temp_dir,
-                        args.graph,
-                        args.labels,
-                        args.output_directory,
-                        prefix)
-    
-    # remove temporary directory
-    shutil.rmtree(temp_dir)
+                 prefix,
+                 args.graph,
+                 args.labels)
  
     # Write aligned image to disk, including markings of
     # which cells were ok or not 

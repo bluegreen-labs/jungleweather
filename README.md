@@ -120,7 +120,7 @@ Although the classification results aren't 100% perfect, the general agreement i
 
 ##### time required
 
-Template matching is automated so a time requirement in terms of true man hours is pointless. In machine time the processing of 100K images would take # days.
+Template matching is automated so a time requirement in terms of true man hours is pointless. Howeve, the processing of one table takes ~7 seconds. Which translates in roughly 6 hours of computational time to process the digitized tables within the COBECORE project. Although performance might vary depending on the system used the expected times would be reasonable, and measured in less than a day rather than days or weeks.
 
 ## Post-processing
 
