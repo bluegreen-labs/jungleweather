@@ -18,7 +18,7 @@ The Jungle Weather workflow relies on [template matching](https://en.wikipedia.o
 
 In particular, it addresses the issue of outlining locations in a table which contain data, and reducing the complexity of the transcription. As such the workflow will generate data which only presents one value at a time for transcription, limiting the chance of propagating errors in incomplete or corrupted series. At the same time this makes the task easier to complete in informal settings, on a cellphone or a tablet rather than a computer.
 
-Below you find an outline of the steps required to set up a successfull template matching routine using the code in this repository.
+Below you find an outline of the steps required to set up a successfull template matching routine using the code in this repository. Throughout this process I also assume a consistent naming convention in which data is grouped per site, or archival id and delimited using underscores. All images are therefore structured: `archive-id_scan-nr.jpg` a real example therefore reads 6120_057.jpg. You will need to adjust some code below if this structure will not fit your data, as the file name is used as a way to store important meta-data.
 
 ## Pre-processing
 
@@ -51,7 +51,7 @@ Where possible search the dataset for an already empty table. If no empty table 
 
 Convert the this open file to a black and white template, while using the [levels](https://docs.gimp.org/2.10/en/gimp-tool-levels.html) and [curves]() to boost contrast and remove any unwanted gradients in the image. Remove all text which is not part of an empty template using the [eraser](https://docs.gimp.org/2.10/en/gimp-tool-eraser.html). The final result should look as the image below.
 
-![]()
+![](http://cobecore.org/images/documentation/mask.jpg)
 
 When saving these templates use a comprehensive naming scheme with a prefix and a number separated with an underscore (_) such as: "format_1.jpg" or "template_1.jpg". 
 
@@ -61,9 +61,9 @@ This formatting is important for successful use of the python processing code!
 
 #### Outlining table cells
 
-To specify the location of data within a table we will use the guides in GIMP, and a plugin to save this information. To save the guides in GIMP first install the ["save & load guides plugin"](https://github.com/khufkens/GIMP_save_load_guides). After installation of the plugin (and restarting GIMP) outline all cells in a table using GIMP guides.
+To specify the location of data within a table we will use the guides in GIMP, and a plugin to save this information. To save the guides in GIMP first install the ["save & load guides plugin"](https://github.com/khufkens/GIMP_save_load_guides). After installation of the plugin (and restarting GIMP) outline all cells in a table using GIMP guides. Below you see a template with all columns outlined with vertical guides.
 
-![]()
+![](http://cobecore.org/images/documentation/vertical_guides.png)
 
 Once done, save the guides using the plugin (use: Image > Guides > Save). Make sure that the name used for the guides **exactly** matches the name of the image on which the guides are based. The guides will be saved in a file called "guides.txt" and stored this location:  "[userfolder]/.gimp-2.8/guides/guides.txt". Copy this file to your project folder for future processing (I store template data in a dedicated template folder containing all template images and the guides.txt file).
 
