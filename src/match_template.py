@@ -1,25 +1,28 @@
 #!/usr/bin/env python
 
 # Import necessary libraries.
-import os, argparse, glob, tempfile, shutil
+import os, argparse, glob, tempfile, shutil, warnings
 import cv2
 import numpy as np
 import pandas as pd
 import tensorflow as tf
+from tqdm import tqdm
+
+# local functions
 from inner_crop import *
 from label_table_cells import *
 from match_preview import *
+from flatten_image import *
 
-# for ORB feature extraction, will move
-# to SIFT in later release (more robust)
-MAX_FEATURES = 15000
-GOOD_MATCH_PERCENT = 0.1
+# set TF log level (suppress verbose output)
+os.environ['TF_CPP_MIN_LOG_LEVEL'] = '2' 
 
-# parse arguments in a beautiful way
-# includes automatic help generation
+# ignore python warnings
+warnings.simplefilter("ignore")
+
+# argument parser
 def getArgs():
 
-   # setup parser
    parser = argparse.ArgumentParser(
     description = '''Table alignment and subsetting script: 
                     Allows for the alignment of scanned tables relative to a
@@ -35,12 +38,12 @@ def getArgs():
    parser.add_argument('-d',
                        '--directory',
                        help = 'location of the data to match',
-                       default = '../data-raw/format_1/')
+                       default = '/scratch/cobecore/tmp/format_1/')
 
    parser.add_argument('-o',
                        '--output_directory',
                        help = 'location where to store the data',
-                       default = '/home/khufkens/Desktop/output/')
+                       default = '/scratch/cobecore/formatted_scans/format_1/')
 
    parser.add_argument('-s',
                        '--subsets',
@@ -49,19 +52,39 @@ def getArgs():
    parser.add_argument('-sr',
                        '--scale_ratio',
                        help = 'shrink data by factor x, for faster processing',
-                       default = 0.5)
+                       default = 0.25)
                        
-   parser.add_argument('--graph',
+   parser.add_argument('-g',
+                       '--graph',
                        help='graph/model to be executed',
                        default = './cnn_model/cnn_graph.pb')
                        
-   parser.add_argument('--labels',
+   parser.add_argument('-l',
+                       '--labels',
                        help='name of file containing labels',
                        default = './cnn_model/cnn_labels.txt')
 
-   # put arguments in dictionary with
-   # keys being the argument names given above
+   parser.add_argument('-gi',
+                       '--guides',
+                       help='name of file containing cell guides',
+                       default = '../data-raw/templates/guides.txt')
+
+   parser.add_argument('-gm',
+                       '--good_match',
+                       help='good match percentage for ORB features',
+                       default = 0.1)
+                       
+   parser.add_argument('-mf',
+                       '--max_features',
+                       help='max number of ORB features to use',
+                       default = 15000)
+                       
    return parser.parse_args()
+
+def error_log(path, prefix, content):
+    filename = os.path.join(path, prefix + "_error_log.txt")
+    with open(filename, "a") as text_file:
+       text_file.write(content + "\n")
 
 def load_guides(filename, mask_name):
    # check if the guides file can be read
@@ -85,10 +108,10 @@ def load_guides(filename, mask_name):
     print("looking for: " + mask_name + ".csv")
     exit()
 
-def alignImages(im, template, im_original):
+def alignImages(im, template, im_original, max_features, good_match):
   
   # Detect ORB features and compute descriptors.
-  orb = cv2.ORB_create(MAX_FEATURES)
+  orb = cv2.ORB_create(max_features)
   keypoints1, descriptors1 = orb.detectAndCompute(im, None)
   keypoints2, descriptors2 = orb.detectAndCompute(template, None)
    
@@ -100,11 +123,12 @@ def alignImages(im, template, im_original):
   matches.sort(key=lambda x: x.distance, reverse = False)
 
   # Remove not so good matches
-  numGoodMatches = int(len(matches) * GOOD_MATCH_PERCENT)
+  numGoodMatches = int(len(matches) * good_match)
   matches = matches[:numGoodMatches]
 
   # Draw top matches
-  #im_matches = cv2.drawMatches(im, keypoints1, template, keypoints2, matches, None)
+  #im_matches = cv2.drawMatches(im, keypoints1,
+  # template, keypoints2, matches, None)
   
   # Extract location of good matches
   points1 = np.zeros((len(matches), 2), dtype=np.float32)
@@ -121,10 +145,10 @@ def alignImages(im, template, im_original):
   p2 = pd.DataFrame(data=points2)
   refdist = abs(p1 - p2)
   
-  # allow reference points only to be 20% off in any direction
+  # allow reference points only to be 10% off in any direction
+  # TODO: create dynamic tolerance parameter - expand to y-values as well!!!
   refdist = refdist < (im.shape[1] * 0.2)
   refdist = refdist.sum(axis = 1) == 2
-
   points1 = points1[refdist]
   points2 = points2[refdist]
 
@@ -142,6 +166,17 @@ def alignImages(im, template, im_original):
   # return matched image and ancillary data
   return im_registered, h
 
+def flatten(im):
+    
+    # histogram stretching + OTSU thresholding + resizing
+    # (on the red channel)
+    clahe = cv2.createCLAHE(clipLimit = 3, tileGridSize = (15,15))
+    im = clahe.apply(im)
+    im = cv2.GaussianBlur(im,(7, 7),0)
+    ret, im = cv2.threshold(im, 0, 255, cv2.THRESH_BINARY + cv2.THRESH_OTSU)
+    
+    return im
+
 def cookieCutter(locations,
                  im,
                  path,
@@ -149,9 +184,6 @@ def cookieCutter(locations,
                  model_file,
                  label_file):
   
-  # cuts cookies out of the aligned data
-  # for citsci processing
- 
   # split out the locations
   # convert to integer
   x = np.asarray(locations[0][3], dtype=float)
@@ -161,10 +193,20 @@ def cookieCutter(locations,
   y = y.astype(int)
   y = np.sort(y)
   
-  # save the header image
-  y_header = int(y.min())
-  header = im[0:y[0],:]
-  cv2.imwrite(path + "/" + prefix + "_header.jpg", header)
+  # extract header and resize
+  header = im[0:(y[0] - 400),:]
+  header = cv2.resize(header, (0,0), fx = 0.5, fy = 0.5)
+  
+  # annotate header
+  cv2.line(header, (365, 0), (365, header.shape[1]), 255, 2)
+  cv2.putText(header, "A", (375, 30), cv2.FONT_HERSHEY_SIMPLEX, 1, 255, 2)
+  cv2.line(header, (1040, 0), (1040, header.shape[1]), 255, 2)
+  cv2.putText(header, "B", (1050, 30), cv2.FONT_HERSHEY_SIMPLEX, 1, 255, 2)
+  
+  # write header to file
+  cv2.imwrite(path + "/headers/" + prefix + "_header.png",
+    header,
+    [int(cv2.IMWRITE_PNG_COMPRESSION), 9])
 
   # setup CNN
   # load default settings
@@ -232,11 +274,14 @@ def cookieCutter(locations,
        # happens when index runs out
        continue
        
-      tf_im = np.full((crop_im.shape[0],crop_im.shape[1],3),255,dtype=np.uint8)
+      tf_im = np.full((crop_im.shape[0], 
+        crop_im.shape[1],3),255,dtype=np.uint8)
+        
       for l in range(2):
        tf_im[:,:,l] = crop_im
         
-      tf_im = cv2.resize(tf_im, dsize=(128, 128), interpolation = cv2.INTER_CUBIC)
+      tf_im = cv2.resize(tf_im, dsize=(128, 128),
+        interpolation = cv2.INTER_CUBIC)
       tf_im = cv2.normalize(tf_im.astype('float'),
          None, -0.5, .5, cv2.NORM_MINMAX)
       tf_im = np.asarray(tf_im)
@@ -258,7 +303,7 @@ def cookieCutter(locations,
       # screening using a DL routine
       image_name = prefix + "_" + str(i+1) + "_" + str(j+1) + ".jpg"
       file_names.append(image_name)
-      cv2.imwrite(path + "/" + image_name, crop_im)
+      #cv2.imwrite(path + "/" + image_name, crop_im)
 
   # concat data into pandas data frame
   df = pd.DataFrame({'cnn_labels':cnn_labels,
@@ -266,7 +311,7 @@ def cookieCutter(locations,
                    'files':file_names})
 
   # construct path
-  out_file = os.path.join(path, prefix + "_cnn_labels.csv")
+  out_file = os.path.join(path + "/labels/", prefix + "_labels.csv")
   
   # write data to disk
   df.to_csv(out_file, sep=',', index = False)
@@ -281,15 +326,11 @@ if __name__ == '__main__':
   # get scale ratio
   scale_ratio = float(args.scale_ratio)
 
-  # set default guides filename
-  guides_file = "../data-raw/templates/guides.txt"
-
   # extract filename and extension of the mask
   mask_name, file_extension = os.path.splitext(args.template)
   mask_name = os.path.basename(mask_name)
-
-  # Read reference image and convert to grayscale
-  print("Reading reference image : ", args.template)
+  
+  # load mask file
   try:
    template = cv2.imread(args.template)
   except:
@@ -297,104 +338,127 @@ if __name__ == '__main__':
    print(args.template)
    exit()
 
+  # load guides
+  try:
+   guides = load_guides(args.guides, mask_name)
+  except:
+    print("No valid guides file found at:")
+    print(args.guides)
+    exit()
+
   # split out red channel
+  # shows more even ligthing conditions
   _,_,template = cv2.split(template)
   
-  # create an original full sized copy of the template
-  # other operations are on scaled versions
+  # create a copy of the original
   template_original = template
   
-  # blurring for OTSU thresholding
+  # OTSU thresholding + resizing
   template = cv2.GaussianBlur(template,(7, 7),0)
-    
-  # threshold original image
-  ret, template = cv2.threshold(template, 0, 255, cv2.THRESH_BINARY+cv2.THRESH_OTSU)
-
-  # resize
-  template = cv2.resize(template, (0,0), fx = scale_ratio, fy = scale_ratio)
+  ret, template = cv2.threshold(template, 0, 255,
+    cv2.THRESH_BINARY+cv2.THRESH_OTSU)
+  template = cv2.resize(template, (0,0),
+   fx = scale_ratio,
+   fy = scale_ratio)
   
   # list image files to be aligned and subdivided
-  files = glob.glob(args.directory + "*.jpg")
+  files = sorted(glob.glob(args.directory + "*.jpg"))
 
-  # loop over all files, align and subdivide
-  for i, file in enumerate(files):
+  # Some verbose feedback before kicking off the processing
+  print("\n")
+  print("Reading reference image : " + str(args.template))
+  print("Sourcing from : " + str(args.directory))
+  print("Saving to : " + str(args.output_directory))
+  print("\n")
   
-    # extract the prefix of the file under evaluation
-    prefix = mask_name + "_" + os.path.basename(file).split('.')[0]
+  # loop over all files, align and subdivide and report progress
+  with tqdm(total = len(files), dynamic_ncols=True) as pbar:
+    for i, file in enumerate(files):
+    
+      # update progress
+      pbar.update()
+      
+      # compile final output directory name
+      archive_id = os.path.basename(file).split('.')[0].split('_')[0]
+      output_directory = args.output_directory + "/" + archive_id + "/"
+      prefix = mask_name + "_" + os.path.basename(file).split('.')[0]
+      
+      # read input data
+      try:
+        im = cv2.imread(file)
+      except:
+        error_log(args.output_directory, "read", file)
+        continue
   
-    # compile final output directory name
-    archive_id = os.path.basename(file).split('.')[0].split('_')[0]
-    output_directory = args.output_directory + "/" + archive_id + "/"
-    
-    # create output directory if required
-    if not os.path.exists(output_directory):
-     os.makedirs(output_directory)
-  
-    print("Reading image to align : " + file)
-    im = cv2.imread(file)
+      # crop red channel, reproject original
+      # using the same parameters (crop)
+      # im = innerCrop(im)
+      
+      # create a grayscale copy
+      # split out red channel for further processing
+      im_tmp = cv2.cvtColor(im, cv2.COLOR_BGR2GRAY)
+      _,_,im = cv2.split(im)
 
-    # crop image
-    print("-- cropping original data")
-    im = innerCrop(im)
+      # flatten image (binarization)
+      im = flatten(im)
 
-    # create a copy (not thresholded) / convert to grayscale
-    im_tmp = cv2.cvtColor(im, cv2.COLOR_BGR2GRAY)
-
-    # split out red channel
-    _,_,im = cv2.split(im)
-
-    # histogram stretching
-    clahe = cv2.createCLAHE(clipLimit=2.0, tileGridSize=(12,12))
-    im = clahe.apply(im)
-
-    # blurring for OTSU thresholding
-    im = cv2.GaussianBlur(im,(7, 7),0)
-    
-    # threshold original image
-    ret, im = cv2.threshold(im, 0, 255, cv2.THRESH_BINARY+cv2.THRESH_OTSU)
-
-    # resize to the size of the scaled template
-    im = cv2.resize(im, (template.shape[1], template.shape[0]))
-    
-    # resize the original data to the size of
-    # the full original template (required)
-    # to be able to rescale to full resolution
-    # with simple homography tweaks
-    im_tmp = cv2.resize(im_tmp,
-     (template_original.shape[1],
-      template_original.shape[0]))
-
-    # Registered image will be restored in imReg.
-    # The estimated homography will be stored in h.
-    print("-- matching data to template")
-    im_aligned, h = alignImages(im, template, im_tmp)
-    
-    # create an alignment preview
-    # stack the template and the aligned image in an
-    # RGB image for quick review
-    sz = im_aligned.shape
-    im_preview = np.full((sz[0],sz[1],3),255, dtype=np.uint8)
-    im_preview[:,:,1] = im_aligned
-    im_preview[:,:,2] = template_original
-    
-    # load guides
-    guides = load_guides(guides_file, mask_name)
-  
-    # cutting things up into cookies
-    print("-- extracting header and table cell subsets")
-    
-    labels = cookieCutter(guides,
-                 im_aligned,
-                 output_directory,
-                 prefix,
-                 args.graph,
-                 args.labels)
+      # resize the image to the size of the template
+      im = cv2.resize(im, (template.shape[1], template.shape[0]))
  
-    # Write aligned image to disk, including markings of
-    # which cells were ok or not 
-    im_preview = print_labels(im_preview, guides, labels)    
-    im_preview = cv2.resize(im_preview, (0,0), fx = 0.25, fy = 0.25)
-    filename = os.path.join(output_directory, prefix + "_preview.jpg")
-    print("-- saving preview image")
-    cv2.imwrite(filename, im_preview)
+      # resize the original data to the size of
+      # the full original template (required)
+      # to be able to rescale to full resolution
+      # with simple homography conversion factors
+      im_tmp = cv2.resize(im_tmp,
+       (template_original.shape[1],
+        template_original.shape[0]))
+  
+      try:
+        im_aligned, h = alignImages(im,
+                                    template,
+                                    im_tmp,
+                                    args.max_features,
+                                    args.good_match)
+      
+        # create an alignment preview
+        sz = im_aligned.shape
+        im_preview = np.full((sz[0],sz[1],3),255, dtype=np.uint8)
+        im_preview[:,:,1] = im_aligned
+        im_preview[:,:,2] = template_original
+    
+        # create output directory if required
+        if not os.path.exists(output_directory):
+          os.makedirs(output_directory)
+    
+        if not os.path.exists(output_directory + "/headers/"):
+          os.makedirs(output_directory + "/headers/")
+    
+        if not os.path.exists(output_directory + "/cells/"):
+          os.makedirs(output_directory + "/cells/")
+   
+        if not os.path.exists(output_directory + "/previews/"):
+          os.makedirs(output_directory + "/previews/")
+    
+        if not os.path.exists(output_directory + "/labels/"):
+          os.makedirs(output_directory + "/labels/")
+    
+        # cutting things up into cookies
+        labels = cookieCutter(guides,
+                     im_aligned,
+                     output_directory,
+                     prefix,
+                     args.graph,
+                     args.labels)
+        
+        # Write aligned image to disk, including markings of
+        # which cells were ok or not 
+        im_preview = print_labels(im_preview, guides, labels)    
+        im_preview = cv2.resize(im_preview, (0,0), fx = 0.25, fy = 0.25)
+        filename = os.path.join(output_directory + "/previews",
+                                prefix + "_preview.jpg")
+        cv2.imwrite(filename, im_preview, [cv2.IMWRITE_JPEG_QUALITY, 50])
+       
+      except:
+        error_log(args.output_directory, "alignment", file)
+        continue
     

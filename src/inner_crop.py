@@ -47,7 +47,11 @@ def innerCrop(image):
     orig = image.copy()
     
     # convert to grayscale (red channel) and blur to smooth
-    _,_,gray = cv2.split(image)
+    try:
+      _,_,gray = cv2.split(image)
+    except:
+      gray = image
+      
     blurred = cv2.GaussianBlur(gray, (5, 5), 0)
     
     # threshold original image
@@ -62,9 +66,7 @@ def innerCrop(image):
     # largest ones, and initialize the screen contour
     (contours, _) = cv2.findContours(edged, cv2.RETR_LIST, cv2.CHAIN_APPROX_NONE)
     contours = sorted(contours, key=cv2.contourArea, reverse=True)
-    
     x,y,w,h = cv2.boundingRect(contours[0])
-    #cv2.rectangle(image,(x,y),(x+w,y+h),(0,0,255),0)
     
     # get approximate contour
     for c in contours:
