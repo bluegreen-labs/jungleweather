@@ -61,22 +61,9 @@ def load_guides(filename, mask_name):
 
 def print_labels(im, locations, df):
   
-  # split things
-  file_names = df.loc[:,'files']
-  label = df.loc[:,'cnn_labels']
+  # retain empty values only
+  df = df.loc[df.cnn_label == "empty",:]
   
-  # select only empty files
-  file_names = file_names.loc[label == "empty"]
-
-  row = []
-  col = []
-  for file_name in file_names:
-   file = os.path.basename(file_name)
-   file = os.path.splitext(file)[0]
-   parts = file.split("_")
-   row.append(parts[5])
-   col.append(parts[4])
-   
   # split out the locations
   # convert to integer
   x = np.asarray(locations[0][3], dtype=float)
@@ -86,12 +73,10 @@ def print_labels(im, locations, df):
   y = y.astype(int)
   y = np.sort(y)
   
-  # loop over all x values
-  #for i, x_value in enumerate(x):
-   #for j, y_value in enumerate(y):
-  for i, y_value in enumerate(row):
-   y_value = int(y_value)
-   x_value = int(col[i])
+  # loop over all rows
+  for i, row in df.iterrows():
+   y_value = int(row['row'])
+   x_value = int(row['col'])
    
    try:
      center_x = int(round((x[x_value-1] + x[x_value])/2))

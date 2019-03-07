@@ -12,7 +12,6 @@ from tqdm import tqdm
 from inner_crop import *
 from label_table_cells import *
 from match_preview import *
-from flatten_image import *
 
 # set TF log level (suppress verbose output)
 os.environ['TF_CPP_MIN_LOG_LEVEL'] = '2' 
@@ -125,10 +124,6 @@ def alignImages(im, template, im_original, max_features, good_match):
   # Remove not so good matches
   numGoodMatches = int(len(matches) * good_match)
   matches = matches[:numGoodMatches]
-
-  # Draw top matches
-  #im_matches = cv2.drawMatches(im, keypoints1,
-  # template, keypoints2, matches, None)
   
   # Extract location of good matches
   points1 = np.zeros((len(matches), 2), dtype=np.float32)
@@ -147,7 +142,7 @@ def alignImages(im, template, im_original, max_features, good_match):
   
   # allow reference points only to be 10% off in any direction
   # TODO: create dynamic tolerance parameter - expand to y-values as well!!!
-  refdist = refdist < (im.shape[1] * 0.2)
+  refdist = refdist < (im.shape[1] * 0.1)
   refdist = refdist.sum(axis = 1) == 2
   points1 = points1[refdist]
   points2 = points2[refdist]
@@ -197,6 +192,9 @@ def cookieCutter(locations,
   header = im[0:(y[0] - 400),:]
   header = cv2.resize(header, (0,0), fx = 0.5, fy = 0.5)
   
+  # split prefix
+  prefix_values = prefix.split("_")
+  
   # annotate header
   cv2.line(header, (365, 0), (365, header.shape[1]), 255, 2)
   cv2.putText(header, "A", (375, 30), cv2.FONT_HERSHEY_SIMPLEX, 1, 255, 2)
@@ -228,9 +226,14 @@ def cookieCutter(locations,
   labels = load_labels(label_file)
 
   # initiate empty vectores
-  cnn_values = []
-  cnn_labels = []
-  file_names = []
+  cnn_value = []
+  cnn_label = []
+  file_name = []
+  row = []
+  col = []
+  index = []
+  img_format = []
+  img_nr = []
 
   # return output
   with tf.Session(graph=graph) as sess:
@@ -238,17 +241,20 @@ def cookieCutter(locations,
     # loop over all x values
     for i, x_value in enumerate(x):
      for j, y_value in enumerate(y):
+       
+      # generates cropped sections based upon
+      # row and column locations
       try:
-      
-       # padding
+       # provide padding
        col_width = int(round((x[i+1] - x[i])/3))
        row_width = int(round((y[i+1] - y[i])/2))
-    
        x_min = int(x[i] - col_width)
        x_max = int(x[i+1] + col_width)
        y_min = int(y[j] - row_width)
        y_max = int(y[j+1] + row_width)
   
+       # trap end of table issues 
+       # (when running out of x space)
        if x_max > int(im.shape[1]):
         x_max = int(im.shape[1])
   
@@ -286,29 +292,39 @@ def cookieCutter(locations,
          None, -0.5, .5, cv2.NORM_MINMAX)
       tf_im = np.asarray(tf_im)
       tf_im = np.expand_dims(tf_im,axis=0)
-       
+      
+      # TF classifier 
       results = sess.run(output_operation.outputs[0], {
-             input_operation.outputs[0]: tf_im
-         })
+             input_operation.outputs[0]: tf_im })
       results = np.squeeze(results)
       top = results.argsort()[-5:][::-1]
-      cnn_values.append(results[top[0]])
-      cnn_labels.append(labels[top[0]])
   
       # if the crop routine didn't fail write to disk
       #filename = path + "/" + prefix + "_" + str(i+1) + "_" + str(j+1) + ".jpg"
       #cv2.imwrite(filename, crop_im_rect, [cv2.IMWRITE_JPEG_QUALITY, 50])
       
-      # write the clean images to a temporary directory for
-      # screening using a DL routine
       image_name = prefix + "_" + str(i+1) + "_" + str(j+1) + ".jpg"
-      file_names.append(image_name)
-      #cv2.imwrite(path + "/" + image_name, crop_im)
-
+      
+      # write label output data to vectors
+      cnn_value.append(results[top[0]])
+      cnn_label.append(labels[top[0]])
+      file_name.append(image_name)
+      col.append(i + 1)
+      row.append(j + 1)
+      
+      index.append(prefix_values[1])
+      img_format.append(prefix_values[2])
+      img_nr.append(prefix_values[3])
+      
   # concat data into pandas data frame
-  df = pd.DataFrame({'cnn_labels':cnn_labels,
-                   'cnn_values':cnn_values,
-                   'files':file_names})
+  df = pd.DataFrame({'cnn_label':cnn_label,
+                   'cnn_value':cnn_value,
+                   'col':col,
+                   'row':row,
+                   'index':index,
+                   'format':img_format,
+                   'img_nr':img_nr,
+                   'file':file_name})
 
   # construct path
   out_file = os.path.join(path + "/labels/", prefix + "_labels.csv")
@@ -392,7 +408,7 @@ if __name__ == '__main__':
   
       # crop red channel, reproject original
       # using the same parameters (crop)
-      # im = innerCrop(im)
+      im = innerCrop(im)
       
       # create a grayscale copy
       # split out red channel for further processing
@@ -414,11 +430,12 @@ if __name__ == '__main__':
         template_original.shape[0]))
   
       try:
-        im_aligned, h = alignImages(im,
-                                    template,
-                                    im_tmp,
-                                    args.max_features,
-                                    args.good_match)
+        im_aligned, h = alignImages(
+          im,
+          template,
+          im_tmp,
+          args.max_features,
+          args.good_match)
       
         # create an alignment preview
         sz = im_aligned.shape
@@ -441,14 +458,20 @@ if __name__ == '__main__':
     
         if not os.path.exists(output_directory + "/labels/"):
           os.makedirs(output_directory + "/labels/")
-    
+          
+      except:
+        error_log(args.output_directory, "alignment", file)
+        continue      
+          
+      try:
         # cutting things up into cookies
-        labels = cookieCutter(guides,
-                     im_aligned,
-                     output_directory,
-                     prefix,
-                     args.graph,
-                     args.labels)
+        labels = cookieCutter(
+          guides,
+          im_aligned,
+          output_directory,
+          prefix,
+          args.graph,
+          args.labels)
         
         # Write aligned image to disk, including markings of
         # which cells were ok or not 
@@ -459,6 +482,5 @@ if __name__ == '__main__':
         cv2.imwrite(filename, im_preview, [cv2.IMWRITE_JPEG_QUALITY, 50])
        
       except:
-        error_log(args.output_directory, "alignment", file)
+        error_log(args.output_directory, "label", file)
         continue
-    
