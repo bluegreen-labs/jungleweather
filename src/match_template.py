@@ -142,7 +142,7 @@ def alignImages(im, template, im_original, max_features, good_match):
   
   # allow reference points only to be 10% off in any direction
   # TODO: create dynamic tolerance parameter - expand to y-values as well!!!
-  refdist = refdist < (im.shape[1] * 0.1)
+  refdist = refdist < (im.shape[1] * 0.2)
   refdist = refdist.sum(axis = 1) == 2
   points1 = points1[refdist]
   points2 = points2[refdist]
@@ -408,7 +408,7 @@ if __name__ == '__main__':
   
       # crop red channel, reproject original
       # using the same parameters (crop)
-      im = innerCrop(im)
+      #im = innerCrop(im)
       
       # create a grayscale copy
       # split out red channel for further processing
