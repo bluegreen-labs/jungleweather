@@ -62,7 +62,7 @@ def load_guides(filename, mask_name):
 def print_labels(im, locations, df):
   
   # retain empty values only
-  df = df.loc[df.cnn_label == "empty",:]
+  #df = df.loc[df.cnn_label == "empty",:]
   
   # split out the locations
   # convert to integer
@@ -77,15 +77,23 @@ def print_labels(im, locations, df):
   for i, row in df.iterrows():
    y_value = int(row['row'])
    x_value = int(row['col'])
+   label = row['cnn_label']
    
-   try:
-     center_x = int(round((x[x_value-1] + x[x_value])/2))
-     center_y = int(round((y[y_value-1] + y[y_value])/2))
-     font = cv2.FONT_HERSHEY_SIMPLEX
-     cv2.putText(im, "X" ,(center_x,center_y), font, 2,(255,255,255),10,cv2.LINE_AA)
-   except:
+   center_x = int(round((x[x_value-1] + x[x_value])/2))
+   center_y = int(round((y[y_value-1] + y[y_value])/2))
+   
+   if label == 'empty':
+    try:
+     cv2.putText(im, "X" ,(center_x,center_y),
+      cv2.FONT_HERSHEY_SIMPLEX, 2,(255,255,255),10,cv2.LINE_AA)
+    except:
      continue
-  
+   else:
+    try:
+     cv2.putText(im, "." ,(center_x,center_y),
+      cv2.FONT_HERSHEY_SIMPLEX, 2,(255,255,255),10,cv2.LINE_AA)
+    except:
+     continue
   return im
 
 if __name__ == '__main__':

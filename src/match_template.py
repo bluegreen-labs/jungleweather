@@ -14,7 +14,7 @@ from label_table_cells import *
 from match_preview import *
 
 # set TF log level (suppress verbose output)
-os.environ['TF_CPP_MIN_LOG_LEVEL'] = '2' 
+os.environ['TF_CPP_MIN_LOG_LEVEL'] = '2'
 
 # ignore python warnings
 warnings.simplefilter("ignore")
@@ -37,12 +37,12 @@ def getArgs():
    parser.add_argument('-d',
                        '--directory',
                        help = 'location of the data to match',
-                       default = '/scratch/cobecore/tmp/format_1/')
+                       default = '../data-raw/format_1/')
 
    parser.add_argument('-o',
                        '--output_directory',
                        help = 'location where to store the data',
-                       default = '/scratch/cobecore/formatted_scans/format_1/')
+                       default = '../data/output/')
 
    parser.add_argument('-s',
                        '--subsets',
@@ -77,6 +77,11 @@ def getArgs():
                        '--max_features',
                        help='max number of ORB features to use',
                        default = 15000)
+                       
+   parser.add_argument('-c',
+                       '--crop',
+                       help='crop before binarization',
+                       default = False)                   
                        
    return parser.parse_args()
 
@@ -119,20 +124,20 @@ def alignImages(im, template, im_original, max_features, good_match):
   matches = matcher.match(descriptors1, descriptors2, None)
   
   # Sort matches by score
-  matches.sort(key=lambda x: x.distance, reverse = False)
+  matches.sort(key = lambda x: x.distance, reverse = False)
 
   # Remove not so good matches
   numGoodMatches = int(len(matches) * good_match)
   matches = matches[:numGoodMatches]
   
   # Extract location of good matches
-  points1 = np.zeros((len(matches), 2), dtype=np.float32)
-  points2 = np.zeros((len(matches), 2), dtype=np.float32)
+  points1 = np.zeros((len(matches), 2), dtype = np.float32)
+  points2 = np.zeros((len(matches), 2), dtype = np.float32)
 
   for i, match in enumerate(matches):
     points1[i, :] = keypoints1[match.queryIdx].pt
     points2[i, :] = keypoints2[match.trainIdx].pt
-  
+
   # Prune reference points based upon distance between
   # key points. This assumes a fairly good alignment to start with
   # due to the protocol used (location of the sheets)
@@ -140,9 +145,9 @@ def alignImages(im, template, im_original, max_features, good_match):
   p2 = pd.DataFrame(data=points2)
   refdist = abs(p1 - p2)
   
-  # allow reference points only to be 10% off in any direction
-  # TODO: create dynamic tolerance parameter - expand to y-values as well!!!
-  refdist = refdist < (im.shape[1] * 0.2)
+  # allow reference points only to be 20% off in any direction
+  refdist.loc[:,0] = refdist.loc[:,0] < (im.shape[0] * 0.2)
+  refdist.loc[:,1] = refdist.loc[:,1] < (im.shape[1] * 0.2)
   refdist = refdist.sum(axis = 1) == 2
   points1 = points1[refdist]
   points2 = points2[refdist]
@@ -152,7 +157,9 @@ def alignImages(im, template, im_original, max_features, good_match):
   
   # correct for scale factor, only works if both the template
   # and the matching image are of the same size
-  h = h * [[1,1,1/scale_ratio],[1,1,1/scale_ratio],[scale_ratio,scale_ratio,1]]
+  h = h * [[1,1,1/scale_ratio],
+           [1,1,1/scale_ratio],
+           [scale_ratio,scale_ratio,1]]
 
   # Use homography to reshape data
   height, width = im_original.shape
@@ -236,85 +243,99 @@ def cookieCutter(locations,
   img_nr = []
 
   # return output
-  with tf.Session(graph=graph) as sess:
+  with tf.Session(graph = graph) as sess:
     
     # loop over all x values
-    for i, x_value in enumerate(x):
-     for j, y_value in enumerate(y):
-       
+    for i, x_value in enumerate(x[0:(len(x)-1)]):
+     for j, y_value in enumerate(y[0:(len(y)-1)]):
+      
       # generates cropped sections based upon
       # row and column locations
       try:
        # provide padding
        col_width = int(round((x[i+1] - x[i])/3))
-       row_width = int(round((y[i+1] - y[i])/2))
+       row_width = int(round((y[j+1] - y[j])/2))
+       
        x_min = int(x[i] - col_width)
        x_max = int(x[i+1] + col_width)
+       
        y_min = int(y[j] - row_width)
        y_max = int(y[j+1] + row_width)
   
        # trap end of table issues 
-       # (when running out of x space)
-       if x_max > int(im.shape[1]):
-        x_max = int(im.shape[1])
+       # (when running out of space)
+       if x_max > im.shape[1]:
+         x_max = int(im.shape[1])
+        
+       if y_max > im.shape[0]:
+         y_max = int(im.shape[0])
   
        # copy
-       #im_rect = im.copy()
+       im_rect = im.copy()
        
        # draw rectangle
-       #cv2.line(im_rect, (x_min+col_width-15, y_max-row_width+10),
-       #(x_min+col_width-5, y_max-row_width+10), 255, 3)
-       #cv2.line(im_rect, (x_min+col_width-15, y_max-row_width+10),
-       #(x_min+col_width-15, y_max-row_width), 255, 3)
+       cv2.line(im_rect, (x_min+col_width-15, y_max-row_width+10),
+       (x_min+col_width-5, y_max-row_width+10), 255, 3)
+       cv2.line(im_rect, (x_min+col_width-15, y_max-row_width+10),
+       (x_min+col_width-15, y_max-row_width), 255, 3)
+  
+       cv2.line(im_rect, (x_max-col_width+15, y_min+row_width-10),
+       (x_max-col_width+5, y_min+row_width-10), 255, 3)
+       cv2.line(im_rect, (x_max-col_width+15, y_min+row_width-10),
+       (x_max-col_width+15, y_min+row_width), 255, 3)
   
        # shaded section
        #im_rect[y_max-row_width+10:,:] = im_rect[y_max-row_width+10:,:] * 0.7
   
        # crop images using preset coordinates both
        # with and without a rectangle
-       #crop_im_rect = im_rect[y_min:y_max,x_min:x_max]
-       crop_im = im[y_min:y_max,x_min:x_max]
+       crop_im_rect = im_rect[y_min:y_max,x_min:x_max]
+       crop_im = im[y_min:y_max, x_min:x_max]
+      
+       # populate grayscale image
+       tf_im = np.full((crop_im.shape[0],
+         crop_im.shape[1],3),255,dtype=np.uint8)
+       for l in range(2):
+        tf_im[:,:,l] = crop_im
+
+       # TF pre-processing
+       tf_im = cv2.resize(tf_im, dsize = (128, 128),
+         interpolation = cv2.INTER_CUBIC)
+       tf_im = cv2.normalize(tf_im.astype('float'),
+          None, -0.5, .5, cv2.NORM_MINMAX)
+       tf_im = np.asarray(tf_im)
+       tf_im = np.expand_dims(tf_im,axis=0)
+
+       # TF classifier
+       results = sess.run(output_operation.outputs[0], {
+             input_operation.outputs[0]: tf_im })
+       results = np.squeeze(results)
+       top = results.argsort()[-5:][::-1]
+
+       image_name = prefix + "_" + str(i+1) + "_" + str(j+1) + ".png"
+
+       # if the crop routine didn't fail write to disk
+       cv2.imwrite(path + "/cells/" + image_name,
+        crop_im_rect, [int(cv2.IMWRITE_PNG_COMPRESSION), 9])
+      
+       # write label output data to vectors
+       cnn_value.append(results[top[0]])
+       cnn_label.append(labels[top[0]])
        
+       # add filename and row / col numbers
+       file_name.append(image_name)
+       col.append(i + 1)
+       row.append(j + 1)
+      
+       # add nilco index, format and image number
+       index.append(prefix_values[1])
+       img_format.append(prefix_values[2])
+       img_nr.append(prefix_values[3])
+      
       except:
        # Continue to next iteration on fail
        # happens when index runs out
        continue
-       
-      tf_im = np.full((crop_im.shape[0], 
-        crop_im.shape[1],3),255,dtype=np.uint8)
-        
-      for l in range(2):
-       tf_im[:,:,l] = crop_im
-        
-      tf_im = cv2.resize(tf_im, dsize=(128, 128),
-        interpolation = cv2.INTER_CUBIC)
-      tf_im = cv2.normalize(tf_im.astype('float'),
-         None, -0.5, .5, cv2.NORM_MINMAX)
-      tf_im = np.asarray(tf_im)
-      tf_im = np.expand_dims(tf_im,axis=0)
-      
-      # TF classifier 
-      results = sess.run(output_operation.outputs[0], {
-             input_operation.outputs[0]: tf_im })
-      results = np.squeeze(results)
-      top = results.argsort()[-5:][::-1]
-  
-      # if the crop routine didn't fail write to disk
-      #filename = path + "/" + prefix + "_" + str(i+1) + "_" + str(j+1) + ".jpg"
-      #cv2.imwrite(filename, crop_im_rect, [cv2.IMWRITE_JPEG_QUALITY, 50])
-      
-      image_name = prefix + "_" + str(i+1) + "_" + str(j+1) + ".jpg"
-      
-      # write label output data to vectors
-      cnn_value.append(results[top[0]])
-      cnn_label.append(labels[top[0]])
-      file_name.append(image_name)
-      col.append(i + 1)
-      row.append(j + 1)
-      
-      index.append(prefix_values[1])
-      img_format.append(prefix_values[2])
-      img_nr.append(prefix_values[3])
       
   # concat data into pandas data frame
   df = pd.DataFrame({'cnn_label':cnn_label,
@@ -333,6 +354,23 @@ def cookieCutter(locations,
   df.to_csv(out_file, sep=',', index = False)
   
   return df
+
+def setup_outdir(output_directory):
+  
+  if not os.path.exists(output_directory):
+    os.makedirs(output_directory)
+    
+  if not os.path.exists(output_directory + "/headers/"):
+    os.makedirs(output_directory + "/headers/")
+    
+  if not os.path.exists(output_directory + "/cells/"):
+    os.makedirs(output_directory + "/cells/")
+   
+  if not os.path.exists(output_directory + "/previews/"):
+    os.makedirs(output_directory + "/previews/")
+  
+  if not os.path.exists(output_directory + "/labels/"):
+    os.makedirs(output_directory + "/labels/")
 
 if __name__ == '__main__':
   
@@ -408,7 +446,8 @@ if __name__ == '__main__':
   
       # crop red channel, reproject original
       # using the same parameters (crop)
-      #im = innerCrop(im)
+      if args.crop:
+        im = innerCrop(im)
       
       # create a grayscale copy
       # split out red channel for further processing
@@ -429,6 +468,7 @@ if __name__ == '__main__':
        (template_original.shape[1],
         template_original.shape[0]))
   
+      # align images
       try:
         im_aligned, h = alignImages(
           im,
@@ -442,29 +482,16 @@ if __name__ == '__main__':
         im_preview = np.full((sz[0],sz[1],3),255, dtype=np.uint8)
         im_preview[:,:,1] = im_aligned
         im_preview[:,:,2] = template_original
-    
-        # create output directory if required
-        if not os.path.exists(output_directory):
-          os.makedirs(output_directory)
-    
-        if not os.path.exists(output_directory + "/headers/"):
-          os.makedirs(output_directory + "/headers/")
-    
-        if not os.path.exists(output_directory + "/cells/"):
-          os.makedirs(output_directory + "/cells/")
-   
-        if not os.path.exists(output_directory + "/previews/"):
-          os.makedirs(output_directory + "/previews/")
-    
-        if not os.path.exists(output_directory + "/labels/"):
-          os.makedirs(output_directory + "/labels/")
           
       except:
         error_log(args.output_directory, "alignment", file)
         continue      
-          
+      
+      # setup output directories if required
+      setup_outdir(output_directory)
+        
+      # cutting things up into cookies    
       try:
-        # cutting things up into cookies
         labels = cookieCutter(
           guides,
           im_aligned,
@@ -474,7 +501,7 @@ if __name__ == '__main__':
           args.labels)
         
         # Write aligned image to disk, including markings of
-        # which cells were ok or not 
+        # which cells were ok or not (resize, compress to reduce size)
         im_preview = print_labels(im_preview, guides, labels)    
         im_preview = cv2.resize(im_preview, (0,0), fx = 0.25, fy = 0.25)
         filename = os.path.join(output_directory + "/previews",
