@@ -1,16 +1,14 @@
-# Jungle Weather - a COBECORE citizen science data recovery project
+# The Jungle Weather workflow
 
 This repository provides the basis for the [COBECORE](http://cobecore.org) based Jungle Weather project's pre and post-processing. However, this repository can also serve as a template for other data recovery project, especially those in which the forms used are fairly regular in nature.
 
 The code base relies on python and [OpenCV](https://opencv.org/) based pre-processing, including machine learning screening using [TensorFlow](https://www.tensorflow.org/). All post-processing, after annotation on Zooniverse, will be done in R. Given the convenient structure of R packages this approach is used to organize the project.
 
-If you use any of the code in pre- or post-processing cite the project using the following reference, DOI (tbd) and link to the repository:
+If you use any part of the code in pre- or post-processing cite the project using the following reference, DOI (tbd) and link to the repository:
  
- `Koen Hufkens (2019) The Jungle Weather data recovery workflow: low cost data recovery pre- and post-processing`
+ `Koen Hufkens (2019) The Jungle Weather data recovery workflow: pre- and post-processing`
  
- and beware that all code is released under an enforced AGPLv3 license, except for the transfer learning code which fall under an Apache license (for changes see code headers). All data is (c) copyright of the COBECORE and the Belgian State Archive in particular, any re-use is NOT permitted without an explicit agreement. All data is therefore shown for reproducibility and illustration purposes only. 
-
-# The Jungle Weather workflow
+ all code is released under an AGPLv3 license, except for the transfer learning code which fall under an Apache license (for changes see code headers). All data, except the Burton data sheets, is (c) copyright of the COBECORE and the Belgian State Archive in particular, any re-use is NOT permitted without an explicit agreement. Data is therefore included for reproducibility, testing and illustration purposes only.
 
 ## Introduction
 
@@ -36,10 +34,9 @@ In the Jungle Weather project we identified 20+ format of which three make up th
 
 It is best to sort the images using a non-destructive method. It is therefore best to use a non-destructive photo editor or manager combined with tags rather to sort the data, rather than copying the source files around. In case of the Jungle Weather we used the [Shotwell photo editor and manager](https://wiki.gnome.org/Apps/Shotwell), on Windows and OSX Adobe Lightroom might serve the same purpose.
 
+#### time required
 
-##### time required
-
-In terms of  the time required I estimate that sorting and labelling roughly 100K images would take at most a week of time (I finished the +70K images in less than a week, with a high variety of formats).
+In terms of the time required I estimate that sorting and labelling roughly 100K images would take at most a week of time. Within Jungleweather I finished the +70K images in less than a week, with a high variety of formats.
 
 ### Template generation
 
@@ -53,7 +50,7 @@ Convert the this open file to a black and white template, while using the [level
 
 ![](http://cobecore.org/images/documentation/mask.jpg)
 
-When saving these templates use a comprehensive naming scheme with a prefix and a number separated with an underscore (_) such as: "format_1.jpg" or "template_1.jpg". 
+When saving these templates use a comprehensive naming scheme with a prefix and a number separated with an underscore (_) such as: "format_1.jpg" corresponding to the folder containing the image data.
 
 ```
 This formatting is important for successful use of the python processing code!
@@ -67,7 +64,7 @@ To specify the location of data within a table we will use the guides in GIMP, a
 
 Once done, save the guides using the plugin (use: Image > Guides > Save). Make sure that the name used for the guides **exactly** matches the name of the image on which the guides are based. The guides will be saved in a file called "guides.txt" and stored this location:  "[userfolder]/.gimp-2.8/guides/guides.txt". Copy this file to your project folder for future processing (I store template data in a dedicated template folder containing all template images and the guides.txt file).
 
-Note that you can save multiple sets of guides for multiple templates in the same guides.txt file. So in case of COBECORE the guides.txt file contains 20+ lines of guides data.
+Note that you can save multiple sets of guides for multiple templates in the same guides.txt file.
 
 ##### time required
 
@@ -77,17 +74,27 @@ Both tasks depend on the amount of formats available. In case of the COBECORE da
 
 #### required software
 
-The pre-processing of the data depends on [OpenCV](https://opencv.org/), an open source computer vision library. As such a recent version (>3) of OpenCV must be running on your system. 
-
-To install OpenCV please run the following commands in a terminal:
+The pre-processing of the data depends on [OpenCV](https://opencv.org/), an open source computer vision library. As such a recent version (>3) of OpenCV must be running on your system. Screening tables for empty values is done using a [TensorFlow](https://www.tensorflow.org/) based classifier, and requires these libraries to be installed (a trained model is included in this repository). Standard matrix operations are done using numpy and pandas libraries. Both can be installed using the below commands, or come as defaults with your python installation.
 
 ```bash
 # install pip, the python package manager
 curl https://bootstrap.pypa.io/get-pip.py -o get-pip.py
 python get-pip.py
 
+# install pandas
+pip install pandas
+
+# install numpy
+pip install numpy
+
 # install OpenCV
 pip install opencv-contrib-python
+
+# install tensorflow (CPU)
+pip install tensorflow
+
+# for those with CUDA enabled NVIDIA cards you may use
+# pip install tensorflow-gpu
 ```
 
 #### template matching
@@ -108,7 +115,7 @@ The transformed image is subsequently divided into individual cells (with some p
 
 ### Machine learning empty cell values
 
-I use a machine (transfer) learning approach to retrain a convoluted neural net (CNN) in order to detect empty cells in the historical data tables. For convenience the model is run on individual (extracted) cells rather than on the data sheet as a whole. Although the latter approach would be feasible, the workflow described above made it easier to deal with the data on a cell by cell basis.
+I use a machine (transfer) learning approach to retrain a TensorFlow based convoluted neural net (CNN) in order to detect empty cells in the historical data tables. For convenience the model is run on individual (extracted) cells rather than on the data sheet as a whole. Although the latter approach would be feasible, the workflow described above made it easier to deal with the data on a cell by cell basis.
 
 For a number of data sheets the data was sorted in complete and empty cells. This data was then used in combination with the transfer learning code to train the CNN. The trained model is stored in the `src/cnn_model` directory and used when calling the `label_table_cell.py` code. The project includes a pre-trained model for reference.
 
@@ -135,3 +142,5 @@ git clone https://github.com/khufkens/jungleweather.git
 or use the [download link](https://github.com/khufkens/jungleweather/archive/master.zip).
 
 With [RStudio installed](https://www.rstudio.com/) open the R project by double clicking on the .Rproj file. This will open up the project in RStudio. Explore the functions in the R directory and adjust to your needs (naming conventions).
+
+As the project has not produced any results yet only very basic meta-data scripts are included. More will folow as the project progresses.
