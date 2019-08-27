@@ -1,14 +1,16 @@
 # The Jungle Weather workflow
 
-This repository provides the basis for the [COBECORE](http://cobecore.org) based Jungle Weather project's pre and post-processing. However, this repository can also serve as a template for other data recovery project, especially those in which the forms used are fairly regular in nature.
-
-The code base relies on python and [OpenCV](https://opencv.org/) based pre-processing, including machine learning screening using [TensorFlow](https://www.tensorflow.org/). All post-processing, after annotation on Zooniverse, will be done in R. Given the convenient structure of R packages this approach is used to organize the project.
-
-If you use any part of the code in pre- or post-processing cite the project using the following reference, DOI (tbd) and link to the repository:
+Before you start, if you use any part of the code in pre- or post-processing cite the project using the following reference, DOI (tbd) and link to the repository:
  
  `Koen Hufkens (2019) The Jungle Weather data recovery workflow: pre- and post-processing`
- 
- all code is released under an AGPLv3 license, except for the transfer learning code which fall under an Apache license (for changes see code headers). All data, except the Burton data sheets, is (c) copyright of the COBECORE and the Belgian State Archive in particular, any re-use is NOT permitted without an explicit agreement. Data is therefore included for reproducibility, testing and illustration purposes only.
+
+Note that all code is released under an AGPLv3 license, except for the transfer learning code which fall under an Apache license (for changes see code headers). All data, except the Burton data sheets, is (c) copyright of the COBECORE and the Belgian State Archive in particular, any re-use is NOT permitted without an explicit agreement. Data is therefore included for reproducibility, testing and illustration purposes only.
+
+## Use case
+
+This repository provides the basis for the [COBECORE](http://cobecore.org) based Jungle Weather project's pre- and post-processing. However, this repository can also serve as a template for other data recovery project, especially those in which the forms used are fairly regular in nature.
+
+The code base relies on python and [OpenCV](https://opencv.org/) based pre-processing, including machine learning screening using [TensorFlow](https://www.tensorflow.org/). All post-processing, after annotation on Zooniverse, will be done in R. Given the convenient structure of R packages this approach is used to organize the project.
 
 ## Introduction
 
