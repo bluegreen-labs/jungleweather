@@ -8,6 +8,8 @@ Before you start, if you use any part of the code in pre- or post-processing cit
 
 Note that all code is released under an AGPLv3 license, except for the transfer learning code which fall under an Apache license (for changes see code headers). All data, except the Burton data sheets, is (c) copyright of the COBECORE and the Belgian State Archive in particular, any re-use is NOT permitted without an explicit agreement. Data is therefore included for reproducibility, testing and illustration purposes only.
 
+Note that this code comes without any guarantees. I refer to [my consulting policy](https://khufkens.com/consulting/) if you need custom advice on your project, unrelated to standard bug reports.
+
 ## Use case
 
 This repository provides the basis for the [COBECORE](http://cobecore.org) based Jungle Weather project's pre- and post-processing. However, this repository can also serve as a template for other data recovery project, especially those in which the forms used are fairly regular in nature.
