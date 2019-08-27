@@ -1,8 +1,10 @@
+[![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.3378864.svg)](https://doi.org/10.5281/zenodo.3378864)
+
 # The Jungle Weather workflow
 
-Before you start, if you use any part of the code in pre- or post-processing cite the project using the following reference, DOI (tbd) and link to the repository:
+Before you start, if you use any part of the code in pre- or post-processing cite the project using the following reference of the repository:
  
- `Koen Hufkens (2019) The Jungle Weather data recovery workflow: pre- and post-processing`
+ `Koen Hufkens (2019) The Jungle Weather data recovery workflow: pre- and post-processing https://doi.org/10.5281/zenodo.3378864`
 
 Note that all code is released under an AGPLv3 license, except for the transfer learning code which fall under an Apache license (for changes see code headers). All data, except the Burton data sheets, is (c) copyright of the COBECORE and the Belgian State Archive in particular, any re-use is NOT permitted without an explicit agreement. Data is therefore included for reproducibility, testing and illustration purposes only.
 
