@@ -17,7 +17,7 @@ def getArgs():
    parser.add_argument('-f',
                        '--file',
                        help = 'location of the cnn labels',
-                       default = '/home/khufkens/Desktop/output/format_1_6127_162_cnn_labels.csv')
+                       default = '../data-raw/cnn-labels/format_1_6127_162_cnn_labels.csv')
 
    parser.add_argument('-g',
                        '--guides',
@@ -27,11 +27,11 @@ def getArgs():
    parser.add_argument('-i',
                        '--image',
                        help = 'location of a matched image',
-                       default = '/home/khufkens/Desktop/output/6127/format_1_6127_162_preview.jpg')
+                       default = 'format_1_6127_162_preview.jpg')
                        
    parser.add_argument('--output_dir',
                        help = 'name of output dir',
-                       default = '/home/khufkens/Desktop/output/')
+                       default = '../data/output/')
 
    # put arguments in dictionary with
    # keys being the argument names given above
