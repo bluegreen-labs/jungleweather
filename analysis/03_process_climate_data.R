@@ -13,7 +13,7 @@ library(tidyverse)
 # change for final processing as read.table() is slow for larger
 # files
 df <- read.table(
-  "data-raw/annotations_demo.csv",
+  "~/Downloads/jungle-weather-classifications.csv",
   header = TRUE,
   sep = ",",
   stringsAsFactors = FALSE)
@@ -37,6 +37,7 @@ df <- df |>
 # Get month and year values from the embedded
 # JSON in the CSV (read data frame)
 df <- df |>
+  rowwise() |>
   mutate(
     filename = as.vector(unlist(
       lapply(
@@ -51,7 +52,8 @@ df <- df |>
     value = as.vector(unlist(
       lapply(annotations, function(x){
         data <- jsonlite::fromJSON(x)
-        return(as.numeric(data$value))
+        data <- try(as.numeric(data$value[1]))
+        return(data)
       })))
   )
 
@@ -99,3 +101,8 @@ write.table(
   sep = ","
 )
 
+saveRDS(
+  majority_vote,
+  "data/climate_data_majority_vote.rds",
+  compress = "xz"
+  )
