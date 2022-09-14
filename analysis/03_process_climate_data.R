@@ -12,33 +12,32 @@ library(tidyverse)
 # read in the small demo data using read.table(), this might
 # change for final processing as read.table() is slow for larger
 # files
-df <- read.table("data-raw/annotations_demo.csv",
-                 header = TRUE,
-                 sep = ",",
-                 stringsAsFactors = FALSE)
+df <- read.table(
+  "data-raw/annotations_demo.csv",
+  header = TRUE,
+  sep = ",",
+  stringsAsFactors = FALSE)
+
+# filter unnecessary data which slow down processing
+df <- df |>
+  select(
+    -user_name,
+    -user_ip,
+    -workflow_name
+  )
 
 # Filter out the meta-data workflow (9713)
 # (grepping on meta-data for the workflow name is not correct
 # as the tests data will then be included)
 df <- df |>
   filter(
-    workflow_id == 9713
+    workflow_id == 9712
   )
 
 # Get month and year values from the embedded
 # JSON in the CSV (read data frame)
 df <- df |>
   mutate(
-    month = as.vector(unlist(
-      lapply(annotations, function(x){
-        data <- jsonlite::fromJSON(x)
-        return(data$value[1])
-      }))),
-    year = as.vector(unlist(
-      lapply(annotations, function(x){
-        data <- jsonlite::fromJSON(x)
-        return(data$value[2])
-      }))),
     filename = as.vector(unlist(
       lapply(
       subject_data,
@@ -48,21 +47,19 @@ df <- df |>
           select(contains("Filename")) |>
           unname()
         return(data)
-        })))
+        }))),
+    value = as.vector(unlist(
+      lapply(annotations, function(x){
+        data <- jsonlite::fromJSON(x)
+        return(as.numeric(data$value))
+      })))
   )
 
 # Flag unclear values, those which were not easily read
 # and are certainly due for reprocessing
 df <- df |>
   mutate(
-    year = gsub("[a-zA-Z]|\\W","", year),
-    year = unlist(lapply(year, function(y){
-      l <- nchar(y)
-      substr(y, l-1, l)
-    })),
-    year = ifelse(year == "", NA, year),
-    unclear = grepl("unclear", year),
-    unclear = ifelse(is.na(year), TRUE, unclear)
+    unclear = ifelse(is.na(value), TRUE, FALSE)
   )
 
 # Split out row and columns from the filename
@@ -72,27 +69,30 @@ df <- df |>
 df <- df |>
   mutate(
     folder = str_split(tools::file_path_sans_ext(filename),"_", simplify = TRUE)[,3],
-    image = as.numeric(str_split(tools::file_path_sans_ext(df$filename),"_", simplify = TRUE)[,4])
+    image = as.numeric(str_split(tools::file_path_sans_ext(df$filename),"_", simplify = TRUE)[,4]),
+    col = as.numeric(str_split(tools::file_path_sans_ext(filename),"_", simplify = TRUE)[,5]),
+    row = as.numeric(str_split(tools::file_path_sans_ext(filename),"_", simplify = TRUE)[,6]),
   )
 
 # Group data by subject_id for majority vote analysis
-# and summaries
+# and summaries, I report the number of classifications
+# on record, those that were marked unclear (missing),
+# and the number of unique values (the higher this number)
+# the higher the variability
 majority_vote <- df |>
-  group_by(subject_ids, filename, folder, image) |>
+  group_by(subject_ids, filename) |>
   summarize(
     nr_classifications = n(),
-    nr_months = length(unique(month)),
-    month = names(which.max(table(month))),
-    year = names(which.max(table(year))),
+    value_sd = sd(value, na.rm = TRUE),
+    nr_values = length(unique(value)),
+    value = as.numeric(names(which.max(table(value)))),
     nr_unclear = length(which(unclear))
   )
-
-print(majority_vote)
 
 # save results to the data directory
 write.table(
   majority_vote,
-  "data/header_data_majority_vote.csv",
+  "data/climate_data_majority_vote.csv",
   col.names = TRUE,
   row.names = FALSE,
   quote = FALSE,
