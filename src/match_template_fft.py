@@ -4,9 +4,11 @@
 import os, argparse, glob, tempfile, shutil, warnings
 import cv2
 import numpy as np
+import scipy as sp
 import pandas as pd
 import tensorflow as tf
 from tqdm import tqdm
+import imreg_dft as ird
 
 # local functions
 from inner_crop import *
@@ -37,7 +39,7 @@ def getArgs():
    parser.add_argument('-f',
                        '--file',
                        help = 'file with location of the data to match',
-                       default = '../data-raw/format_1/format_1_batch_1.csv')
+                       default = '../data-raw/format_1/format_1_6118.csv')
 
    parser.add_argument('-o',
                        '--output_directory',
@@ -51,8 +53,7 @@ def getArgs():
    parser.add_argument('-sr',
                        '--scale_ratio',
                        help = 'shrink data by factor x, for faster processing',
-                       default = 0.2,
-                       type = float)
+                       default = 0.2)
                        
    parser.add_argument('-g',
                        '--graph',
@@ -63,16 +64,6 @@ def getArgs():
                        '--labels',
                        help='name of file containing labels',
                        default = './cnn_model/cnn_labels.txt')
-                       
-   parser.add_argument('-fs',
-                       '--format_subset',
-                       help='print subsets',
-                       default = True)
-
-   parser.add_argument('-cs',
-                       '--classify_subset',
-                       help='classify subset with a DNN',
-                       default = False)
 
    parser.add_argument('-gi',
                        '--guides',
@@ -82,19 +73,17 @@ def getArgs():
    parser.add_argument('-gm',
                        '--good_match',
                        help='good match percentage for ORB features',
-                       default = 0.4,
-                       type = float)
+                       default = 0.1)
                        
    parser.add_argument('-mf',
                        '--max_features',
                        help='max number of ORB features to use',
-                       default = 25000,
-                       type = int)
+                       default = 15000)
                        
    parser.add_argument('-c',
                        '--crop',
                        help='crop before binarization',
-                       default = False)                   
+                       default = False)                    
                        
    return parser.parse_args()
 
@@ -125,61 +114,38 @@ def load_guides(filename, mask_name):
     print("looking for: " + mask_name + ".csv")
     exit()
 
-def alignImages(im, template, im_original, max_features, good_match):
+def alignImages(im, template, size):
+
+  im0_orig = cv2.imread(template)
+  height, width = im0_orig.shape[:2]
+  im1_orig = cv2.imread(im)
   
-  # Detect ORB features and compute descriptors.
-  orb = cv2.ORB_create(max_features)
-  keypoints1, descriptors1 = orb.detectAndCompute(im, None)
-  keypoints2, descriptors2 = orb.detectAndCompute(template, None)
+  size_factor = max(im1_orig.shape)/800
+  im0,left,right = resize(im0_orig, size = size)
+
+  # the image to be transformed
+  im1,_,_ = resize(im1_orig, size = size)
+  im1_orig,_,_ = resize(im1_orig, size = int(max(im1_orig.shape)), flat = False)
+  im0_orig,_,_ = resize(im0_orig, size = int(max(im0_orig.shape)))
+
+  # find template match
+  result = ird.similarity(im0, im1, numiter=3)
+
+  # transform the image, scaled to the original
+  timg = result["timg"]
+  timg_scaled = ird.transform_img(im1_orig,
+    tvec = size_factor * result["tvec"],
+    scale = result["scale"],
+    angle = result["angle"])
    
-  # Match features
-  matcher = cv2.DescriptorMatcher_create(cv2.DESCRIPTOR_MATCHER_BRUTEFORCE_HAMMING)
-  matches = matcher.match(descriptors1, descriptors2, None)
-  
-  # Sort matches by score
-  matches.sort(key = lambda x: x.distance, reverse = False)
+  left = int(left * (timg_scaled.shape[0] / size))
+  right = int(right * (timg_scaled.shape[0] / size))
+   
+  timg_scaled = timg_scaled[:, left:(timg_scaled.shape[1] - right)]
 
-  # Remove not so good matches
-  numGoodMatches = int(len(matches) * good_match)
-  matches = matches[:numGoodMatches]
-  
-  # Extract location of good matches
-  points1 = np.zeros((len(matches), 2), dtype = np.float32)
-  points2 = np.zeros((len(matches), 2), dtype = np.float32)
-
-  for i, match in enumerate(matches):
-    points1[i, :] = keypoints1[match.queryIdx].pt
-    points2[i, :] = keypoints2[match.trainIdx].pt
-
-  # Prune reference points based upon distance between
-  # key points. This assumes a fairly good alignment to start with
-  # due to the protocol used (location of the sheets)
-  p1 = pd.DataFrame(data=points1)
-  p2 = pd.DataFrame(data=points2)
-  refdist = abs(p1 - p2)
-  
-  # allow reference points only to be 20% off in any direction
-  refdist.loc[:,0] = refdist.loc[:,0] < (im.shape[0] * 0.1)
-  refdist.loc[:,1] = refdist.loc[:,1] < (im.shape[1] * 0.1)
-  refdist = refdist.sum(axis = 1) == 2
-  points1 = points1[refdist]
-  points2 = points2[refdist]
-
-  # Find homography
-  h, mask = cv2.findHomography(points1, points2, cv2.RANSAC)
-  
-  # correct for scale factor, only works if both the template
-  # and the matching image are of the same size
-  h = h * [[1,1,1/scale_ratio],
-           [1,1,1/scale_ratio],
-           [scale_ratio,scale_ratio,1]]
-
-  # Use homography to reshape data
-  height, width = im_original.shape
-  im_registered = cv2.warpPerspective(im_original, h, (width, height))
-  
-  # return matched image and ancillary data
-  return im_registered, h
+  # resize to fit
+  resized = cv2.resize(timg_scaled, (width, height), interpolation = cv2.INTER_AREA)
+  return resized
 
 def flatten(im):
     
@@ -187,19 +153,43 @@ def flatten(im):
     # (on the red channel)
     clahe = cv2.createCLAHE(clipLimit = 3, tileGridSize = (15,15))
     im = clahe.apply(im)
-    im = cv2.GaussianBlur(im,(7, 7),0)
+    im = cv2.GaussianBlur(im,(3, 3),0)
     ret, im = cv2.threshold(im, 0, 255, cv2.THRESH_BINARY + cv2.THRESH_OTSU)
     
     return im
+
+def resize(im, size, flat = True):
+ 
+ if flat: 
+   # split out red channel
+   # shows more even ligthing conditions
+   _,_,im = cv2.split(im)
+   im = flatten(im)
+ 
+ old_size = im.shape[:2] 
+ ratio = float(size)/max(old_size)
+ new_size = tuple([int(x*ratio) for x in old_size])
+
+ im = cv2.resize(im, (new_size[1], new_size[0]))
+
+ delta_w = size - new_size[1]
+ delta_h = size - new_size[0]
+ top, bottom = delta_h//2, delta_h-(delta_h//2)
+ left, right = delta_w//2, delta_w-(delta_w//2)
+
+ color = [0, 0, 0]
+ new_im = cv2.copyMakeBorder(im, top, bottom, left, right, cv2.BORDER_CONSTANT,
+     value=color)
+     
+ return(new_im, int(left), int(right))
 
 def cookieCutter(locations,
                  im,
                  path,
                  prefix,
                  model_file,
-                 label_file,
-                 classify):
-  
+                 label_file):
+    
   # split out the locations
   # convert to integer
   x = np.asarray(locations[0][3], dtype=float)
@@ -210,18 +200,12 @@ def cookieCutter(locations,
   y = np.sort(y)
   
   # extract header and resize
-  header = im[0:(y[0] - 400),:]
+  header = im[0:y[0],:]
   header = cv2.resize(header, (0,0), fx = 0.5, fy = 0.5)
   
   # split prefix
   prefix_values = prefix.split("_")
-  
-  # annotate header
-  cv2.line(header, (365, 0), (365, header.shape[1]), 255, 2)
-  cv2.putText(header, "A", (375, 30), cv2.FONT_HERSHEY_SIMPLEX, 1, 255, 2)
-  cv2.line(header, (1040, 0), (1040, header.shape[1]), 255, 2)
-  cv2.putText(header, "B", (1050, 30), cv2.FONT_HERSHEY_SIMPLEX, 1, 255, 2)
-  
+   
   # write header to file
   cv2.imwrite(path + "/headers/" + prefix + "_header.png",
     header,
@@ -258,11 +242,11 @@ def cookieCutter(locations,
 
   # return output
   with tf.Session(graph = graph) as sess:
-    
+  
     # loop over all x values
     for i, x_value in enumerate(x[0:(len(x)-1)]):
      for j, y_value in enumerate(y[0:(len(y)-1)]):
-      
+                 
       # generates cropped sections based upon
       # row and column locations
       try:
@@ -283,71 +267,44 @@ def cookieCutter(locations,
         
        if y_max > im.shape[0]:
          y_max = int(im.shape[0])
-  
-       # copy
-       im_rect = im.copy()
-       
-       # draw rectangle
-       cv2.line(im_rect, (x_min+col_width-15, y_max-row_width+10),
-       (x_min+col_width-5, y_max-row_width+10), 255, 3)
-       cv2.line(im_rect, (x_min+col_width-15, y_max-row_width+10),
-       (x_min+col_width-15, y_max-row_width), 255, 3)
-  
-       cv2.line(im_rect, (x_max-col_width+15, y_min+row_width-10),
-       (x_max-col_width+5, y_min+row_width-10), 255, 3)
-       cv2.line(im_rect, (x_max-col_width+15, y_min+row_width-10),
-       (x_max-col_width+15, y_min+row_width), 255, 3)
-  
-       # shaded section
-       #im_rect[y_max-row_width+10:,:] = im_rect[y_max-row_width+10:,:] * 0.7
-  
+    
        # crop images using preset coordinates both
        # with and without a rectangle
-       crop_im_rect = im_rect[y_min:y_max,x_min:x_max]
        crop_im = im[y_min:y_max, x_min:x_max]
-      
+        
        # populate grayscale image
        tf_im = np.full((crop_im.shape[0],
          crop_im.shape[1],3),255,dtype=np.uint8)
-       for l in range(2):
-        tf_im[:,:,l] = crop_im
-
-       # TF pre-processing
-       if classify:
-        tf_im = cv2.resize(tf_im, dsize = (128, 128),
-         interpolation = cv2.INTER_CUBIC)
-        tf_im = cv2.normalize(tf_im.astype('float'),
-          None, -0.5, .5, cv2.NORM_MINMAX)
-        tf_im = np.asarray(tf_im)
-        tf_im = np.expand_dims(tf_im,axis=0)
-
-        # TF classifier
-        results = sess.run(output_operation.outputs[0], {
-             input_operation.outputs[0]: tf_im })
-        results = np.squeeze(results)
-        top = results.argsort()[-5:][::-1]
-
-        # write label output data to vectors
-        cnn_value.append(results[top[0]])
-        cnn_label.append(labels[top[0]])
-       else:
-        # write label output data to vectors
-        cnn_value.append(0)
-        cnn_label.append("not run")
-
-       image_name = prefix + "_" + str(i+1) + "_" + str(j+1) + ".png"
-       image_name_dl = prefix + "_" + str(i+1) + "_" + str(j+1) + "_dl.png"
        
-       if i == 0 or i == 1 or i == 7:
-        # if the crop routine didn't fail write to disk
-        cv2.imwrite(path + "/cells/" + image_name,
-         crop_im_rect, [int(cv2.IMWRITE_PNG_COMPRESSION), 9])
+       # split out red channel
+       _,_,red = cv2.split(crop_im)
          
-        # write "clean file" copy of those for zooniverse
-        # to file for deep learning 
-        cv2.imwrite(path + "/cells/dl/" + image_name_dl,
-         crop_im, [int(cv2.IMWRITE_PNG_COMPRESSION), 9])
-             
+       for l in range(2):
+        tf_im[:,:,l] = red
+       
+       # TF pre-processing
+       tf_im = cv2.resize(tf_im, dsize = (128, 128),
+         interpolation = cv2.INTER_CUBIC)
+       tf_im = cv2.normalize(tf_im.astype('float'),
+          None, -0.5, .5, cv2.NORM_MINMAX)
+       tf_im = np.asarray(tf_im)
+       tf_im = np.expand_dims(tf_im,axis=0)
+
+       # TF classifier
+       results = sess.run(output_operation.outputs[0], {
+             input_operation.outputs[0]: tf_im })
+       results = np.squeeze(results)
+       top = results.argsort()[-5:][::-1]
+       
+       image_name = prefix + "_" + str(i+1) + "_" + str(j+1) + ".png"
+
+       # if the crop routine didn't fail write to disk
+       cv2.imwrite(path + "/cells/" + image_name, crop_im, [int(cv2.IMWRITE_PNG_COMPRESSION), 9])
+            
+       # write label output data to vectors
+       cnn_value.append(results[top[0]])
+       cnn_label.append(labels[top[0]])
+       
        # add filename and row / col numbers
        file_name.append(image_name)
        col.append(i + 1)
@@ -433,19 +390,11 @@ if __name__ == '__main__':
   
   # create a copy of the original
   template_original = template
-  
-  # OTSU thresholding + resizing
-  template = cv2.GaussianBlur(template,(7, 7),0)
-  ret, template = cv2.threshold(template, 0, 255,
-    cv2.THRESH_BINARY+cv2.THRESH_OTSU)
-  template = cv2.resize(template, (0,0),
-   fx = scale_ratio,
-   fy = scale_ratio)
-  
+    
   # list image files to be aligned and subdivided
   files = pd.read_csv(args.file, header=None)
   files = pd.DataFrame(files) 
-  
+
   # Some verbose feedback before kicking off the processing
   print("\n")
   print("Reading reference image : " + str(args.template))
@@ -459,7 +408,10 @@ if __name__ == '__main__':
     
       i = index.Index
       file = index[1]
-                  
+    
+      # update progress
+      pbar.update()
+      
       # compile final output directory name
       archive_id = os.path.basename(file).split('.')[0].split('_')[0]
       output_directory = args.output_directory + "/" + archive_id + "/"
@@ -472,81 +424,44 @@ if __name__ == '__main__':
         error_log(args.output_directory, "read", file)
         continue
   
-      # crop red channel, reproject original
-      # using the same parameters (crop)
-      if args.crop:
-        im = innerCrop(im)
-      
-      # create a grayscale copy
-      # split out red channel for further processing
-      im_tmp = cv2.cvtColor(im, cv2.COLOR_BGR2GRAY)
-      _,_,im = cv2.split(im)
-
-      # flatten image (binarization)
-      im = flatten(im)
-
-      # resize the image to the size of the template
-      im = cv2.resize(im, (template.shape[1], template.shape[0]))
- 
-      # resize the original data to the size of
-      # the full original template (required)
-      # to be able to rescale to full resolution
-      # with simple homography conversion factors
-      im_tmp = cv2.resize(im_tmp,
-       (template_original.shape[1],
-        template_original.shape[0]))
-  
       # align images
       try:
-        im_aligned, h = alignImages(
-          im,
-          template,
-          im_tmp,
-          args.max_features,
-          args.good_match)
-      
+        
+        im_aligned = alignImages(im = file,
+         template = args.template , size = 800)
+                    
         # create an alignment preview
         sz = im_aligned.shape
         im_preview = np.full((sz[0],sz[1],3),255, dtype=np.uint8)
-        im_preview[:,:,1] = im_aligned
+        im_preview[:,:,1] = im_aligned[:,:,1]
         im_preview[:,:,2] = template_original
           
       except:
         error_log(args.output_directory, "alignment", file)
         continue      
-      
+            
       # setup output directories if required
       setup_outdir(output_directory)
         
       # cutting things up into cookies    
-      if args.format_subset:
-       try:
-         labels = cookieCutter(
-           guides,
-           im_aligned,
-           output_directory,
-           prefix,
-           args.graph,
-           args.labels,
-           args.classify_subset)
-
-         if args.classify_subset:
-          # which cells were ok or not overprint data
-          im_preview = print_labels(im_preview, guides, labels)
-       
-       except:
-        print("error")
-        error_log(args.output_directory, "label", file)
-        #continue
-  
-      # Write aligned image to disk, including markings of
-      im_preview = cv2.resize(im_preview, (0,0), fx = 0.25, fy = 0.25)
-      filename = os.path.join(output_directory + "/previews",
-                                prefix + "_preview.jpg")
-      cv2.imwrite(filename, im_preview, [cv2.IMWRITE_JPEG_QUALITY, 50])
+      try:
       
-      # update progress
-      pbar.update()
-  
-  # Shutdown when run is completed
-  #os.system('shutdown -s')
+        labels = cookieCutter(
+          guides,
+          im_aligned,
+          output_directory,
+          prefix,
+          args.graph,
+          args.labels)
+                      
+        # Write aligned image to disk, including markings of
+        # which cells were ok or not (resize, compress to reduce size)
+        im_preview = print_labels(im_preview, guides, labels)    
+        im_preview = cv2.resize(im_preview, (0,0), fx = 0.25, fy = 0.25)
+        filename = os.path.join(output_directory + "/previews",
+                                prefix + "_preview.jpg")
+        cv2.imwrite(filename, im_preview, [cv2.IMWRITE_JPEG_QUALITY, 50])
+       
+      except:
+        error_log(args.output_directory, "label", file)
+        continue
