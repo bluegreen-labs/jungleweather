@@ -38,7 +38,17 @@ df <- df |>
       lapply(annotations, function(x){
         data <- jsonlite::fromJSON(x)
         return(data$value[2])
-      }))) 
+      }))),
+    filename = as.vector(unlist(
+      lapply(
+      subject_data,
+      function(x){
+        data <- as.data.frame(t(unlist(jsonlite::fromJSON(x))))
+        data <- data |> 
+          select(contains("Filename")) |>
+          unname()
+        return(data)
+        })))
   )
 
 # Flag unclear values, those which were not easily read
@@ -57,14 +67,23 @@ df <- df |>
 
 # Group data by subject_id for majority vote analysis
 # and summaries
-tmp <- df |>
-  group_by(subject_ids) |>
+majority_vote <- df |>
+  group_by(subject_ids, filename) |>
   summarize(
     nr_classifications = n(),
     month = names(which.max(table(month))),
+    nr_months = length(unique(month)),
     year = names(which.max(table(year))),
     nr_unclear = length(which(unclear))
   )
 
-# print results
-print(tmp)
+# save results to the data directory
+write.table(
+  majority_vote,
+  "data/header_data_majority_vote.csv",
+  col.names = TRUE,
+  row.names = FALSE,
+  quote = FALSE,
+  sep = ","
+)
+
