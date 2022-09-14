@@ -21,9 +21,9 @@ vignettes/*.pdf
 
 # data files
 data/
-data-raw/transciptions_jurg_luterbacher
+data-raw/transcriptions_jurg_luterbacher
+data-raw/cnn_data
 
 # py cache
 src/__pycache__/
-
 *.pyc
