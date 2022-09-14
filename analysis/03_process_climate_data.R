@@ -37,7 +37,6 @@ df <- df |>
 # Get month and year values from the embedded
 # JSON in the CSV (read data frame)
 df <- df |>
-  rowwise() |>
   mutate(
     filename = as.vector(unlist(
       lapply(
@@ -52,7 +51,7 @@ df <- df |>
     value = as.vector(unlist(
       lapply(annotations, function(x){
         data <- jsonlite::fromJSON(x)
-        data <- try(as.numeric(data$value[1]))
+        data <- as.numeric(data$value[1])
         return(data)
       })))
   )
