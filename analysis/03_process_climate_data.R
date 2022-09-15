@@ -13,7 +13,7 @@ library(tidyverse)
 # change for final processing as read.table() is slow for larger
 # files
 df <- read.table(
-  "~/Downloads/jungle-weather-classifications.csv",
+  "data/classifications/jungle-weather-classifications.csv",
   header = TRUE,
   sep = ",",
   stringsAsFactors = FALSE)
@@ -69,8 +69,9 @@ df <- df |>
 # (given a fixed format used in this data set)
 df <- df |>
   mutate(
+    filename = basename(filename),
     folder = str_split(tools::file_path_sans_ext(filename),"_", simplify = TRUE)[,3],
-    image = as.numeric(str_split(tools::file_path_sans_ext(df$filename),"_", simplify = TRUE)[,4]),
+    image = as.numeric(str_split(tools::file_path_sans_ext(filename),"_", simplify = TRUE)[,4]),
     col = as.numeric(str_split(tools::file_path_sans_ext(filename),"_", simplify = TRUE)[,5]),
     row = as.numeric(str_split(tools::file_path_sans_ext(filename),"_", simplify = TRUE)[,6]),
   )
