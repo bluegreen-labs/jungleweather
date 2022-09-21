@@ -6,7 +6,7 @@ Before you start, if you use any part of the code in pre- or post-processing cit
  
  `Koen Hufkens (2019) The Jungle Weather data recovery workflow: pre- and post-processing https://doi.org/10.5281/zenodo.3378864`
 
-Note that all code is released under an AGPLv3 license, except for the transfer learning code which fall under an Apache license (for changes see code headers). All data, except the Burton data sheets, is (c) copyright of the COBECORE and the Belgian State Archive in particular, any re-use is NOT permitted without an explicit agreement. Data is therefore included for reproducibility, testing and illustration purposes only.
+Note that all code is released under an AGPLv3 license, except for the transfer learning code which fall under an Apache license (for changes see code headers). All data, except the Burton data sheets, is (c) copyright of the COBECORE and the Belgian State Archive in particular, any re-use is NOT permitted without an explicit agreement. Any data is therefore included for testing and illustration purposes only, until a formal publication and lifting of this notice. Any use without permission will result in prosecution.
 
 Note that this code comes without any guarantees. I refer to [my consulting policy](https://khufkens.com/consulting/) if you need custom advice on your project, unrelated to standard bug reports.
 
