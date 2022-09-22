@@ -2,7 +2,13 @@
 
 # The Jungle Weather workflow
 
-## How to cite this package in your article
+## Use case
+
+This repository provides the basis for the [COBECORE](http://cobecore.org) based Jungle Weather project's pre- and post-processing. However, this repository can also serve as a template for other data recovery project, especially those in which the forms used are fairly regular in nature.
+
+The code base relies on python and [OpenCV](https://opencv.org/) based pre-processing, including machine learning screening using [TensorFlow](https://www.tensorflow.org/). All post-processing, after annotation on Zooniverse, will be done in R. Given the convenient structure of R packages this approach is used to organize the project.
+
+### How to cite this package in your article
 
 You can cite the code in this repository like this:
 
@@ -11,12 +17,6 @@ You can cite the code in this repository like this:
 Note that all code is released under an AGPLv3 license, except for the transfer learning code which fall under an Apache license (for changes see code headers). All data, except the Burton data sheets, is (c) copyright of the COBECORE and the Belgian State Archive in particular, any re-use is NOT permitted without an explicit agreement. Any data is therefore included for testing and illustration purposes only, until a formal publication and lifting of this notice. Any use without permission will result in prosecution.
 
 Note that this code comes without any guarantees. I refer to [my consulting policy](https://khufkens.com/consulting/) if you need custom advice on your project, unrelated to standard bug reports.
-
-## Use case
-
-This repository provides the basis for the [COBECORE](http://cobecore.org) based Jungle Weather project's pre- and post-processing. However, this repository can also serve as a template for other data recovery project, especially those in which the forms used are fairly regular in nature.
-
-The code base relies on python and [OpenCV](https://opencv.org/) based pre-processing, including machine learning screening using [TensorFlow](https://www.tensorflow.org/). All post-processing, after annotation on Zooniverse, will be done in R. Given the convenient structure of R packages this approach is used to organize the project.
 
 ## Introduction
 
