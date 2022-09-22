@@ -11,8 +11,6 @@
 #'
 #' @return
 #' @export
-#'
-#' @examples
 
 format_manifest <- function(
   path,

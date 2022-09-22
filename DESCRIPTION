@@ -1,0 +1,21 @@
+Package: jungleweather
+Title: jungleweather website
+Version: 0.1
+Authors@R: c(person(
+               family = "Hufkens",
+               given = "Koen",
+               email = "koen.hufkens@gmail.com",
+               role = c("aut", "cre"),
+               comment = c(ORCID = "0000-0002-5070-8109")),
+             person(given = "BlueGreen Labs",
+              role = c("cph", "fnd"))
+               )
+Description: Explaining the Jungle Weather pre- and post-processing workflow.
+License: AGPL-3
+Suggests: 
+    knitr,
+    rmarkdown
+VignetteBuilder: 
+    knitr
+Encoding: UTF-8
+RoxygenNote: 7.2.1

@@ -2,9 +2,11 @@
 
 # The Jungle Weather workflow
 
-Before you start, if you use any part of the code in pre- or post-processing cite the project using the following reference of the repository:
- 
- `Koen Hufkens (2019) The Jungle Weather data recovery workflow: pre- and post-processing https://doi.org/10.5281/zenodo.3378864`
+## How to cite this package in your article
+
+You can cite the code in this repository like this:
+
+> Hufkens K. (2022). The Jungle Weather workflow: facilitating data digitization https://doi.org/10.5281/zenodo.3378864
 
 Note that all code is released under an AGPLv3 license, except for the transfer learning code which fall under an Apache license (for changes see code headers). All data, except the Burton data sheets, is (c) copyright of the COBECORE and the Belgian State Archive in particular, any re-use is NOT permitted without an explicit agreement. Any data is therefore included for testing and illustration purposes only, until a formal publication and lifting of this notice. Any use without permission will result in prosecution.
 

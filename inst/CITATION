@@ -1,0 +1,14 @@
+
+citHeader("To cite ecmwfr in publications use:")
+
+citEntry(entry = "Misc",
+         title = "The Jungle Weather workflow: facilitating data digitization",
+         author = personList(as.person("Koen Hufkens")),
+         year = "2022",
+         doi = "10.5281/zenodo.3378864",
+         url = "https://bluegreen-labs.github.io/jungleweather/",
+         textVersion  =
+           paste("Hufkens K. (2022).",
+                 "The Jungle Weather workflow: facilitating data digitization",
+                 "https://doi.org/10.5281/zenodo.3378864")
+)

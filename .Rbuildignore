@@ -9,3 +9,4 @@ LICENSE
 ^data$
 ^data-raw$
 ^src$
+^analysis$

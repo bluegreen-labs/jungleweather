@@ -1,5 +1,14 @@
-# iterate over a list of images
-# which were not properly coded
+
+#' Validate manifest corrections
+#' 
+#' visually check corrected / added files
+#' to manifest statements
+#'
+#' @param files CSV with files to check
+#' @param path location of the image (cell) data
+#'
+#' @return
+#' @export
 
 validate_corrections <- function(
   files = "data-raw/format_1/format_1_batch_1_corrections.csv",
