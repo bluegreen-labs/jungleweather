@@ -91,16 +91,7 @@ majority_vote <- df |>
     nr_unclear = length(which(unclear))
   )
 
-# save results to the data directory
-write.table(
-  majority_vote,
-  "data/climate_data_majority_vote.csv",
-  col.names = TRUE,
-  row.names = FALSE,
-  quote = FALSE,
-  sep = ","
-)
-
+# save data to disk (serial R format)
 saveRDS(
   majority_vote,
   "data/climate_data_majority_vote.rds",
