@@ -12,14 +12,17 @@ library(tidyverse)
 # read in the small demo data using read.table(), this might
 # change for final processing as read.table() is slow for larger
 # files
-df <- read.table(
-  "data/classifications/jungle-weather-classifications.csv",
-  header = TRUE,
-  sep = ",",
-  stringsAsFactors = FALSE)
+
+# read in the raw data (full set)
+raw_data <- read.table(
+    "data/classifications/transcribe-climate-data-classifications.csv",
+    header = TRUE,
+    sep = ",",
+    stringsAsFactors = FALSE
+    )
 
 # filter unnecessary data which slow down processing
-df <- df |>
+df <- raw_data |>
   select(
     -user_name,
     -user_ip,

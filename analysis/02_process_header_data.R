@@ -9,18 +9,19 @@
 # load the tidyverse for data wrangling
 library(tidyverse)
 
-# read in the small demo data using read.table(), this might
-# change for final processing as read.table() is slow for larger
-# files
-df <- read.table("data/classifications/jungle-weather-classifications.csv",
-                 header = TRUE,
-                 sep = ",",
-                 stringsAsFactors = FALSE)
+# read in the raw data (full set)
+# as downloaded from the Zenodo archive
+raw_data <- read.table(
+    "data/classifications/transcribe-meta-data-classifications.csv",
+    header = TRUE,
+    sep = ",",
+    stringsAsFactors = FALSE
+    )
 
 # Filter out the meta-data workflow (9713)
-# (grepping on meta-data for the workflow name is not correct
-# as the tests data will then be included)
-df <- df |>
+# This should already be limited to this workflow
+# but better be sure
+df <- raw_data |>
   filter(
     workflow_id == 9713
   )
