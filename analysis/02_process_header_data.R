@@ -84,7 +84,7 @@ majority_vote <- df |>
     nr_classifications = n(),
     nr_months = length(unique(month)),
     month = names(which.max(table(month))),
-    year = names(which.max(table(year))),
+    year = ifelse(is.null(names(which.max(table(year)))), NA, names(which.max(table(year)))),
     nr_unclear = length(which(unclear))
   )
 
