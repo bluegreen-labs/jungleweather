@@ -12,7 +12,7 @@ library(tidyverse)
 # read in the small demo data using read.table(), this might
 # change for final processing as read.table() is slow for larger
 # files
-df <- read.table("data-raw/annotations_demo.csv",
+df <- read.table("data/classifications/jungle-weather-classifications.csv",
                  header = TRUE,
                  sep = ",",
                  stringsAsFactors = FALSE)
@@ -87,15 +87,10 @@ majority_vote <- df |>
     nr_unclear = length(which(unclear))
   )
 
-print(majority_vote)
-
-# save results to the data directory
-write.table(
+# save data to disk (serial R format)
+saveRDS(
   majority_vote,
-  "data/header_data_majority_vote.csv",
-  col.names = TRUE,
-  row.names = FALSE,
-  quote = FALSE,
-  sep = ","
+  "data/header_data_majority_vote.rds",
+  compress = "xz"
 )
 
