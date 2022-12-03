@@ -94,4 +94,3 @@ saveRDS(
   "data/header_data_majority_vote.rds",
   compress = "xz"
 )
-
