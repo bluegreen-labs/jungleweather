@@ -20,7 +20,7 @@ vignettes/*.pdf
 .Rproj.user
 
 # data files
-data/
+data/classifications
 data-raw/transcriptions_jurg_luterbacher
 data-raw/cnn_data
 
