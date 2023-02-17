@@ -12,8 +12,14 @@ library(tidyverse)
 # read in the small demo data using read.table(), this might
 # change for final processing as read.table() is slow for larger
 # files
+# df <- read.table(
+#   "data/classifications/jungle-weather-classifications.csv",
+#   header = TRUE,
+#   sep = ",",
+#   stringsAsFactors = FALSE)
+
 df <- read.table(
-  "data/classifications/jungle-weather-classifications.csv",
+  "data-raw/annotations_demo.csv",
   header = TRUE,
   sep = ",",
   stringsAsFactors = FALSE)
@@ -76,13 +82,17 @@ df <- df |>
     row = as.numeric(str_split(tools::file_path_sans_ext(filename),"_", simplify = TRUE)[,6]),
   )
 
+break
+
 # Group data by subject_id for majority vote analysis
 # and summaries, I report the number of classifications
 # on record, those that were marked unclear (missing),
 # and the number of unique values (the higher this number)
 # the higher the variability
 majority_vote <- df |>
-  group_by(subject_ids, filename) |>
+  # filename here == subject_id but including it retains the
+  # value automatically
+  group_by(subject_ids, filename) |> 
   summarize(
     nr_classifications = n(),
     value_sd = sd(value, na.rm = TRUE),
