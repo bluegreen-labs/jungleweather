@@ -153,6 +153,6 @@ With [RStudio installed](https://www.rstudio.com/) open the R project by double 
 
 As the project has not produced any results yet only very basic meta-data scripts are included. More will folow as the project progresses.
 
-Acknowledgements
+## Acknowledgements
 
 This project was supported by the Belgian Science Policy office COBECORE project (BELSPO; grant BR/175/A3/COBECORE),the Marie Skłodowska-Curie Action (H2020 grant 797668) and BlueGreen Labs.
