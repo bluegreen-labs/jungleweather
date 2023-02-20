@@ -152,3 +152,7 @@ or use the [download link](https://github.com/khufkens/jungleweather/archive/mas
 With [RStudio installed](https://www.rstudio.com/) open the R project by double clicking on the .Rproj file. This will open up the project in RStudio. Explore the functions in the R directory and adjust to your needs (naming conventions).
 
 As the project has not produced any results yet only very basic meta-data scripts are included. More will folow as the project progresses.
+
+Acknowledgements
+
+This project was supported by the Belgian Science Policy office COBECORE project (BELSPO; grant BR/175/A3/COBECORE),the Marie Skłodowska-Curie Action (H2020 grant 797668) and BlueGreen Labs.
