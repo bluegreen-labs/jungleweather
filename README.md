@@ -26,6 +26,20 @@ In particular, it addresses the issue of outlining locations in a table which co
 
 Below you find an outline of the steps required to set up a successfull template matching routine using the code in this repository. Throughout this process I also assume a consistent naming convention in which data is grouped per site, or archival id and delimited using underscores. All images are therefore structured: `archive-id_scan-nr.jpg` a real example therefore reads 6120_057.jpg. You will need to adjust some code below if this structure will not fit your data, as the file name is used as a way to store important meta-data.
 
+## Image acquisitions
+
+In our project we used a custom reproduction setup, however for general purposes I'll list all parts required for a light weight data recovery project.
+
+- DSLR Camera (24MP) - e.g. Canon 750D or 850D (T6i T8 in the US)
+- Semi wide angle lens - e.g. Canon EF-S 24mm f/2.8 STM Lens
+- Dummy battery - allows you to run the camera indefinitely without having to recharge batteries
+- Macro ring light - lens mounted, for illumination without shadow
+- 2x Lighting panels - for side illumination in darker settings
+- (Travel) tripod - Light and sturdy tripod, can be any brand
+- Overhead camera boom pole - to avoid the tripod "feet" you will need a boom which extends horizontally
+- 1 or 2TB SSD external hard drive - for shock resistant backups
+- white table cloth as uniform background
+
 ## Pre-processing
 
 ### Data sorting
