@@ -40,6 +40,8 @@ In our project we used a custom reproduction setup, however for general purposes
 - 1 or 2TB SSD external hard drive - for shock resistant backups
 - white table cloth as uniform background
 
+Try to find USB powered peripheral electronics to limit the number of power sockets required, and keep things tidy.
+
 ## Pre-processing
 
 ### Data sorting
