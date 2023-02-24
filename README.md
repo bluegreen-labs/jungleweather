@@ -18,17 +18,9 @@ Note that all code is released under an AGPLv3 license, except for the transfer 
 
 Note that this code comes without any guarantees. I refer to [my consulting policy](https://khufkens.com/consulting/) if you need custom advice on your project, unrelated to standard bug reports.
 
-## Introduction
+## Image acquisitions setup
 
-The Jungle Weather workflow relies on [template matching](https://en.wikipedia.org/wiki/Template_matching). This technique is commonly used in automatic form completion and matches an existing, empty, template with a completed form. Although most historical data isn't designed from the ground up for template matching we can leverage this technique to reduce the workload required during transcription.
-
-In particular, it addresses the issue of outlining locations in a table which contain data, and reducing the complexity of the transcription. As such the workflow will generate data which only presents one value at a time for transcription, limiting the chance of propagating errors in incomplete or corrupted series. At the same time this makes the task easier to complete in informal settings, on a cellphone or a tablet rather than a computer.
-
-Below you find an outline of the steps required to set up a successfull template matching routine using the code in this repository. Throughout this process I also assume a consistent naming convention in which data is grouped per site, or archival id and delimited using underscores. All images are therefore structured: `archive-id_scan-nr.jpg` a real example therefore reads 6120_057.jpg. You will need to adjust some code below if this structure will not fit your data, as the file name is used as a way to store important meta-data.
-
-## Image acquisitions
-
-In our project we used a custom reproduction setup, however for general purposes I'll list all parts required for a light weight data recovery project.
+In our project we used a custom reproduction setup, however for general purposes we list all parts required for a light weight data recovery project.
 
 - DSLR Camera (24MP) - e.g. Canon 750D or 850D (T6i T8 in the US)
 - Semi wide angle lens - e.g. Canon EF-S 24mm f/2.8 STM Lens
@@ -41,6 +33,14 @@ In our project we used a custom reproduction setup, however for general purposes
 - white table cloth as uniform background
 
 Try to find USB powered peripheral electronics to limit the number of power sockets required, and keep things tidy.
+
+## Introduction
+
+The Jungle Weather workflow relies on [template matching](https://en.wikipedia.org/wiki/Template_matching). This technique is commonly used in automatic form completion and matches an existing, empty, template with a completed form. Although most historical data isn't designed from the ground up for template matching we can leverage this technique to reduce the workload required during transcription.
+
+In particular, it addresses the issue of outlining locations in a table which contain data, and reducing the complexity of the transcription. As such the workflow will generate data which only presents one value at a time for transcription, limiting the chance of propagating errors in incomplete or corrupted series. At the same time this makes the task easier to complete in informal settings, on a cellphone or a tablet rather than a computer.
+
+Below you find an outline of the steps required to set up a successfull template matching routine using the code in this repository. Throughout this process I also assume a consistent naming convention in which data is grouped per site, or archival id and delimited using underscores. All images are therefore structured: `archive-id_scan-nr.jpg` a real example therefore reads 6120_057.jpg. You will need to adjust some code below if this structure will not fit your data, as the file name is used as a way to store important meta-data.
 
 ## Pre-processing
 
