@@ -89,16 +89,9 @@
 </div>
 </div>
 <div class="section level2">
-<h2 id="introduction">Introduction<a class="anchor" aria-label="anchor" href="#introduction"></a>
+<h2 id="image-acquisitions-setup">Image acquisitions setup<a class="anchor" aria-label="anchor" href="#image-acquisitions-setup"></a>
 </h2>
-<p>The Jungle Weather workflow relies on <a href="https://en.wikipedia.org/wiki/Template_matching" class="external-link">template matching</a>. This technique is commonly used in automatic form completion and matches an existing, empty, template with a completed form. Although most historical data isn’t designed from the ground up for template matching we can leverage this technique to reduce the workload required during transcription.</p>
-<p>In particular, it addresses the issue of outlining locations in a table which contain data, and reducing the complexity of the transcription. As such the workflow will generate data which only presents one value at a time for transcription, limiting the chance of propagating errors in incomplete or corrupted series. At the same time this makes the task easier to complete in informal settings, on a cellphone or a tablet rather than a computer.</p>
-<p>Below you find an outline of the steps required to set up a successfull template matching routine using the code in this repository. Throughout this process I also assume a consistent naming convention in which data is grouped per site, or archival id and delimited using underscores. All images are therefore structured: <code>archive-id_scan-nr.jpg</code> a real example therefore reads 6120_057.jpg. You will need to adjust some code below if this structure will not fit your data, as the file name is used as a way to store important meta-data.</p>
-</div>
-<div class="section level2">
-<h2 id="image-acquisitions">Image acquisitions<a class="anchor" aria-label="anchor" href="#image-acquisitions"></a>
-</h2>
-<p>In our project we used a custom reproduction setup, however for general purposes I’ll list all parts required for a light weight data recovery project.</p>
+<p>In our project we used a custom reproduction setup, however for general purposes we list all parts required for a light weight data recovery project.</p>
 <ul>
 <li>DSLR Camera (24MP) - e.g. Canon 750D or 850D (T6i T8 in the US)</li>
 <li>Semi wide angle lens - e.g. Canon EF-S 24mm f/2.8 STM Lens</li>
@@ -111,6 +104,13 @@
 <li>white table cloth as uniform background</li>
 </ul>
 <p>Try to find USB powered peripheral electronics to limit the number of power sockets required, and keep things tidy.</p>
+</div>
+<div class="section level2">
+<h2 id="introduction">Introduction<a class="anchor" aria-label="anchor" href="#introduction"></a>
+</h2>
+<p>The Jungle Weather workflow relies on <a href="https://en.wikipedia.org/wiki/Template_matching" class="external-link">template matching</a>. This technique is commonly used in automatic form completion and matches an existing, empty, template with a completed form. Although most historical data isn’t designed from the ground up for template matching we can leverage this technique to reduce the workload required during transcription.</p>
+<p>In particular, it addresses the issue of outlining locations in a table which contain data, and reducing the complexity of the transcription. As such the workflow will generate data which only presents one value at a time for transcription, limiting the chance of propagating errors in incomplete or corrupted series. At the same time this makes the task easier to complete in informal settings, on a cellphone or a tablet rather than a computer.</p>
+<p>Below you find an outline of the steps required to set up a successfull template matching routine using the code in this repository. Throughout this process I also assume a consistent naming convention in which data is grouped per site, or archival id and delimited using underscores. All images are therefore structured: <code>archive-id_scan-nr.jpg</code> a real example therefore reads 6120_057.jpg. You will need to adjust some code below if this structure will not fit your data, as the file name is used as a way to store important meta-data.</p>
 </div>
 <div class="section level2">
 <h2 id="pre-processing">Pre-processing<a class="anchor" aria-label="anchor" href="#pre-processing"></a>
