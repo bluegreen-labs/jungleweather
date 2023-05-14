@@ -18,6 +18,22 @@ Note that all code is released under an AGPLv3 license, except for the transfer 
 
 Note that this code comes without any guarantees. I refer to [my consulting policy](https://khufkens.com/consulting/) if you need custom advice on your project, unrelated to standard bug reports.
 
+## Image acquisitions setup
+
+In our project we used a custom reproduction setup, however for general purposes we list all parts required for a light weight data recovery project.
+
+- DSLR Camera (24MP) - e.g. Canon 750D or 850D (T6i T8 in the US)
+- Semi wide angle lens - e.g. Canon EF-S 24mm f/2.8 STM Lens
+- Dummy battery - allows you to run the camera indefinitely without having to recharge batteries
+- Macro ring light - lens mounted, for illumination without shadow
+- 2x Lighting panels - for side illumination in darker settings
+- (Travel) tripod - Light and sturdy tripod, can be any brand
+- Overhead camera boom pole - to avoid the tripod "feet" you will need a boom which extends horizontally
+- 1 or 2TB SSD external hard drive - for shock resistant backups
+- white table cloth as uniform background
+
+Try to find USB powered peripheral electronics to limit the number of power sockets required, and keep things tidy.
+
 ## Introduction
 
 The Jungle Weather workflow relies on [template matching](https://en.wikipedia.org/wiki/Template_matching). This technique is commonly used in automatic form completion and matches an existing, empty, template with a completed form. Although most historical data isn't designed from the ground up for template matching we can leverage this technique to reduce the workload required during transcription.
@@ -152,3 +168,7 @@ or use the [download link](https://github.com/khufkens/jungleweather/archive/mas
 With [RStudio installed](https://www.rstudio.com/) open the R project by double clicking on the .Rproj file. This will open up the project in RStudio. Explore the functions in the R directory and adjust to your needs (naming conventions).
 
 As the project has not produced any results yet only very basic meta-data scripts are included. More will folow as the project progresses.
+
+## Acknowledgements
+
+This project was supported by the Belgian Science Policy office COBECORE project (BELSPO; grant BR/175/A3/COBECORE),the Marie Skłodowska-Curie Action (H2020 grant 797668) and BlueGreen Labs.
