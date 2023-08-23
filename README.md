@@ -34,6 +34,8 @@ In our project we used a custom reproduction setup, however for general purposes
 
 Try to find USB powered peripheral electronics to limit the number of power sockets required, and keep things tidy.
 
+In the COBECORE project we used a free software solution, built around a Ubuntu linux install and [Entangle](https://entangle-photo.org/) for image acquisition.
+
 ## Introduction
 
 The Jungle Weather workflow relies on [template matching](https://en.wikipedia.org/wiki/Template_matching). This technique is commonly used in automatic form completion and matches an existing, empty, template with a completed form. Although most historical data isn't designed from the ground up for template matching we can leverage this technique to reduce the workload required during transcription.
